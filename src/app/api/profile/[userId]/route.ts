@@ -20,6 +20,9 @@ export async function GET(
   }
 
   try {
+    const user=await prisma.user.findMany({
+      where:{id:userId}
+    })
     const userPosts = await prisma.post.findMany({
       where: { authorId: userId },
       include: {
@@ -35,7 +38,7 @@ export async function GET(
     });
 
     return new Response(
-      JSON.stringify({ posts: userPosts }),
+      JSON.stringify({ posts: userPosts ,user:user}),
       { status: 200, headers: { "Content-Type": "application/json" } }
     );
   } catch (error) {

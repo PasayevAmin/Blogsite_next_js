@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
 
@@ -9,11 +9,13 @@ type Post = {
   title: string;
   category?: string;
   author: {
+    id:string;
     username: string;
   };
   createdAt: string;
   likes: number;
   comments: number;
+  tags:{ id: number; label: string; color?: string }[];
   content: string;
   image?: string;
 };
@@ -123,6 +125,7 @@ export default function Profile() {
       console.error("Post yaradılmadı:", error);
       alert("Xəta baş verdi");
     }
+     
   }
 
   return (
@@ -220,12 +223,25 @@ export default function Profile() {
                 </p>
 
                 <div className="flex justify-between items-center text-sm text-gray-500 mt-2">
-                  <span>👤 {post.author.username}</span>
+                  <span >👤 {post.author.username}</span>
                   <div className="flex gap-3">
                     <span>❤️ {post.likes}</span>
                     <span>💬 {post.comments}</span>
                   </div>
                 </div>
+                 {post?.tags && post?.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mt-4">
+                          {post.tags.map((tag, index) => (
+                            <span
+                              key={index}
+                              onClick={() => router.push(`/tag/${tag.id}`)}
+                              className="text-white text-xs font-medium px-2 py-1 rounded bg-blue-500 cursor-pointer hover:opacity-80 transition"
+                            >
+                              {tag.label}
+                            </span>
+                          ))}
+                        </div>
+                      )}
               </div>
             </div>
           ))}

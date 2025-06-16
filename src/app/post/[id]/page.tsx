@@ -1,13 +1,20 @@
 "use client";
 
 import { useParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 type Post = {
   id: number;
   title: string;
   category?: string;
+  tags?: {
+    id: number;
+    label: string;
+    color: string
+  }[]
   author: {
+    id:string;
     username: string;
   };
   createdAt: string;
@@ -18,6 +25,7 @@ type Post = {
 };
 
 export default function Details() {
+  const router = useRouter()
   const params = useParams();
   const postId = params?.id;
   const [post, setPost] = useState<Post | null>(null);
@@ -64,19 +72,28 @@ export default function Details() {
         )}
 
         {/* Məlumatlar */}
-        <div className="p-8">
-          <div className="text-center mb-4">
-            {post.category && (
-              <span className="inline-block px-3 py-1 bg-blue-100 text-blue-600 rounded-full text-sm font-medium">
-                {post.category}
+        <div className="p-6 ">
+
+
+          <div className="flex flex-wrap justify-center gap-2 mt-4 mb-4">
+            {post.tags?.map((tag, index) => (
+              <span
+                key={index}
+                onClick={() => router.push(`/tag/${tag.id}`)}
+                className="text-white text-xs font-medium px-2 py-1 rounded bg-blue-500 cursor-pointer hover:opacity-80 transition"
+              >
+                {tag.label}
               </span>
-            )}
+            ))}
           </div>
+
+
+
           <h1 className="text-3xl font-bold text-center text-gray-800 mb-4">
             {post.title}
           </h1>
           <div className="flex justify-center items-center text-gray-500 text-sm gap-4 mb-6">
-            <span>👤 <strong>{post.author.username}</strong></span>
+            <span className="cursor-pointer" onClick={() => router.push(`/profile/${post.author.id}`)}>👤 <strong>{post.author.username}</strong></span>
             <span>📅 {new Date(post.createdAt).toLocaleDateString("az-AZ", { day: "2-digit", month: "long", year: "numeric" })}</span>
             <span className="cursor-pointer">❤️ {post.likes}</span>
             <span className="cursor-pointer">💬 {post.comments}</span>
@@ -84,7 +101,7 @@ export default function Details() {
           <p className="text-gray-700 leading-relaxed text-lg mb-6">
             {post.content}
           </p>
-         
+
         </div>
       </div>
 

@@ -9,7 +9,13 @@ type Post = {
   id: number;
   title: string;
   category?: string;
+  tags:{
+    id:number;
+    label:string;
+    color:string;
+  }[]
   author: {
+    id:number;
     username: string;
   };
   createdAt: string;
@@ -73,10 +79,11 @@ export default function Details() {
           <div
             key={post.id}
             className="bg-white shadow-lg rounded-2xl overflow-hidden transition-transform transform hover:scale-[1.02] hover:shadow-2xl cursor-pointer"
-            onClick={()=>router.push(`/post/${post.id}`)}
           >
             {post.image && (
               <img
+            onClick={()=>router.push(`/post/${post.id}`)}
+
                 src={`/blog/${post.image}`}
                 alt={post.title}
                 className="w-full h-60 object-cover"
@@ -84,11 +91,19 @@ export default function Details() {
             )}
             <div className="p-5 flex flex-col gap-3">
               <div className="flex items-center justify-between text-sm text-gray-400">
-                {post.category && (
-                  <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-xs">
-                    {post.category}
-                  </span>
-                )}
+                 {post?.tags && post?.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mt-4">
+                          {post.tags.map((tag, index) => (
+                            <span
+                              key={index}
+                              
+                              className="text-white text-xs font-medium px-2 py-1 rounded bg-blue-500 cursor-pointer hover:opacity-80 transition"
+                            >
+                              {tag.label}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                 <span>
                   {new Date(post.createdAt).toLocaleDateString("az-AZ", {
                     year: "numeric",
@@ -98,18 +113,22 @@ export default function Details() {
                 </span>
               </div>
 
-              <h2 className="text-xl font-semibold text-gray-800">
+              <h2 
+            onClick={()=>router.push(`/post/${post.id}`)}
+              className="text-xl font-semibold text-gray-800">
                 {post.title}
               </h2>
 
-              <p className="text-gray-600 text-sm">
+              <p 
+            onClick={()=>router.push(`/post/${post.id}`)}
+               className="text-gray-600 text-sm">
                 {post.content.length > 100
                   ? post.content.slice(0, 100) + "..."
                   : post.content}
               </p>
 
               <div className="flex justify-between items-center text-sm text-gray-500 mt-2">
-                <span>👤 {post.author.username}</span>
+                <span onClick={() => router.push(`/profile/${post.author.id}`)}>👤 {post.author.username}</span>
                 <div className="flex gap-3">
                   <span>❤️ {post.likes}</span>
                   <span>💬 {post.comments}</span>

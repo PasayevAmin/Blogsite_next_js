@@ -1,15 +1,16 @@
 "use client";
 
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import * as Popover from "@radix-ui/react-popover";
+import { userAgent } from "next/server";
 
 type Post = {
   id: number;
   title: string;
   tags?: { id: number; label: string; color?: string }[];
   author: {
+    id:number;
     username: string;
   };
   createdAt: string;
@@ -194,7 +195,7 @@ export default function BlogPage() {
                       {post.title}
                     </h2>
                     <div className="flex justify-center items-center text-gray-500 text-sm gap-4 mb-6">
-                      <span>
+                      <span onClick={() => router.push(`/profile/${post.author.id}`)}>
                         👤 <strong>{post.author.username}</strong>
                       </span>
                       <span>
