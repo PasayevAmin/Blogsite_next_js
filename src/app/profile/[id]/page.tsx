@@ -26,7 +26,7 @@ type Tag = {
 export default function Profile() {
   const router = useRouter();
   const params = useParams();
-const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
 
   const [user, setUser] = useState<{
     id?: number;
@@ -37,6 +37,7 @@ const [currentUserId, setCurrentUserId] = useState<number | null>(null);
     email?: string;
     coverImage?: string;
   }>({});
+
   const [posts, setPosts] = useState<Post[]>([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
 
@@ -46,30 +47,34 @@ const [currentUserId, setCurrentUserId] = useState<number | null>(null);
   const [selectedTags, setSelectedTags] = useState<number[]>([]);
   const [followed, setFollowed] = useState(false);
 
-
-
   useEffect(() => {
     const userIdParam = params?.id;
     const userId = userIdParam ? Number(userIdParam) : undefined;
 
     if (userId !== undefined && !isNaN(userId)) {
-
       fetchUserPosts(userId);
     }
 
     fetchTags();
+
     const storedUser = localStorage.getItem("user");
-  if (storedUser) {
-    try {
-      const parsedUser = JSON.parse(storedUser);
-      if (parsedUser?.id) {
-        setCurrentUserId(parsedUser.id);
+    if (storedUser) {
+      try {
+        const parsedUser = JSON.parse(storedUser);
+        if (parsedUser?.id) {
+          setCurrentUserId(parsedUser.id);
+        }
+      } catch (error) {
+        console.error("Invalid user object in localStorage");
       }
-    } catch (error) {
-      console.error("Invalid user object in localStorage");
     }
-  }
   }, []);
+
+  useEffect(() => {
+    if (currentUserId && user.id && currentUserId !== user.id) {
+      checkIfFollowing();
+    }
+  }, [currentUserId, user.id]);
 
   async function fetchUserPosts(userId: number) {
     try {
@@ -78,12 +83,8 @@ const [currentUserId, setCurrentUserId] = useState<number | null>(null);
       setPosts(data.posts);
 
       if (!!data.user.length) {
-
-        setUser(data.user[0])
+        setUser(data.user[0]);
       }
-
-
-
     } catch (error) {
       console.error(error);
     }
@@ -96,6 +97,24 @@ const [currentUserId, setCurrentUserId] = useState<number | null>(null);
       setAllTags(data.tags);
     } catch (err) {
       console.error("Tag yüklənmədi:", err);
+    }
+  }
+
+  async function checkIfFollowing() {
+    try {
+      const res = await fetch("/api/isfollowing", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          followerId: currentUserId,
+          followingId: user.id,
+        }),
+      });
+
+      const data = await res.json();
+      setFollowed(data.isFollowing);
+    } catch (error) {
+      console.error("Follow status yoxlanılmadı:", error);
     }
   }
 
@@ -120,38 +139,30 @@ const [currentUserId, setCurrentUserId] = useState<number | null>(null);
       setNewPostContent("");
       setSelectedTags([]);
       setShowCreateModal(false);
-      
-
     } catch (error) {
       console.error("Post yaradılmadı:", error);
       alert("Xəta baş verdi");
     }
   }
 
+  const handleFollowToggle = async () => {
+    if (!currentUserId || !user.id) return;
 
+    const res = await fetch(`/api/${followed ? "unfollow" : "follow"}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        followerId: currentUserId,
+        followingId: user.id,
+      }),
+    });
 
- 
-
-const handleFollowToggle = async () => {
-  if (!currentUserId || !user.id) return;
-
-  const res = await fetch(`/api/${followed ? "unfollow" : "follow"}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      followerId: currentUserId,
-      followingId: user.id,
-    }),
-  });
-
-  if (res.ok) {
-    setFollowed(!followed);
-  } else {
-    console.error("Follow/Unfollow əməliyyatı uğursuz oldu");
-  }
-};
-
-
+    if (res.ok) {
+      setFollowed(!followed);
+    } else {
+      console.error("Follow/Unfollow əməliyyatı uğursuz oldu");
+    }
+  };
 
   return (
     <div className="bg-gray-100 min-h-screen py-10">
@@ -165,12 +176,7 @@ const handleFollowToggle = async () => {
             >
               Home
             </button>
-            <button
-              onClick={() => router.push("/profile")}
-              className="hover:underline font-medium"
-            >
-              Profile
-            </button>
+           
             <button className="text-blue-600 hover:underline font-medium">
               Explore
             </button>
@@ -190,21 +196,20 @@ const handleFollowToggle = async () => {
                   />
                 )}
               </div>
-              <button
-                onClick={() => handleFollowToggle()}
-                className={`px-5 py-2 rounded-full font-medium text-sm transition duration-300 ${followed
-                  ? "bg-gray-300 text-gray-700 hover:bg-gray-400"
-                  : "bg-blue-600 text-white hover:bg-blue-700"
-                  }`}
-              >
-                {followed ? "Following" : "Follow"}
-              </button>
+              {currentUserId !== user.id && (
+                <button
+                  onClick={() => handleFollowToggle()}
+                  className={`px-5 py-2 rounded-full font-medium text-sm transition duration-300 ${followed
+                    ? "bg-gray-300 text-gray-700 hover:bg-gray-400"
+                    : "bg-blue-600 text-white hover:bg-blue-700"
+                    }`}
+                >
+                  {followed ? "Following" : "Follow"}
+                </button>
+              )}
             </div>
           )}
-
-
         </div>
-
 
         {/* Posts */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -240,7 +245,6 @@ const handleFollowToggle = async () => {
                       alt={post.title}
                       className="w-full h-60 object-cover"
                       onClick={() => router.push(`/post/${post.id}`)}
-
                     />
                   )}
                 </div>
@@ -250,17 +254,17 @@ const handleFollowToggle = async () => {
                 >
                   {post.title}
                 </h2>
-
                 <p className="text-gray-600 text-sm">
                   {post.content.length > 100
                     ? post.content.slice(0, 100) + "..."
                     : post.content}
                 </p>
-
                 <div className="flex justify-between items-center text-sm text-gray-500 mt-2">
                   <span
                     className="hover:underline text-blue-600 cursor-pointer"
-                    onClick={() => router.push(`/profile/${post.author.username}`)}
+                    onClick={() =>
+                      router.push(`/profile/${post.author.username}`)
+                    }
                   >
                     👤 {post.author.username}
                   </span>

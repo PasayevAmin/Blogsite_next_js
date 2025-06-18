@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import * as Popover from "@radix-ui/react-popover";
+
 
 
 type Post = {
@@ -127,6 +129,20 @@ export default function Profile() {
     }
      
   }
+   const handleLogout = async () => {
+    try {
+      const res = await fetch("/api/auth/logout", { method: "POST" });
+
+      if (res.ok) {
+        localStorage.removeItem("user");
+        router.push("/login");
+      } else {
+        alert("Çıxış zamanı xəta baş verdi.");
+      }
+    } catch (error) {
+      console.error("Çıxış zamanı xəta:", error);
+    }
+  };
 
   return (
     <div className="bg-gray-100 min-h-screen py-10">
@@ -146,22 +162,53 @@ export default function Profile() {
             >
               Profile
             </button>
-            <button className="text-blue-600 hover:underline font-medium">
+            <button onClick={() => router.push(`/explore`)} className="text-blue-600 hover:underline font-medium cursor-pointer">
               Explore
             </button>
           </div>
-          <div className="flex items-center space-x-4">
-            <span className="text-gray-700 font-semibold">
-              Welcome, <strong>{user?.username}</strong>
-            </span>
-            {user.coverImage && (
-              <img
-                src={`/uploads/${user.coverImage}`}
-                alt="User Avatar"
-                className="w-16 h-16 rounded-full border object-cover"
-              />
-            )}
-          </div>
+         <div className="hidden sm:flex justify-end items-center space-x-4 mb-8 p-4">
+                     <span className="text-gray-700 font-semibold">
+                       Welcome, <strong>{user?.username}</strong>
+                     </span>
+         
+                     <Popover.Root>
+                       <Popover.Trigger asChild>
+                         {user.coverImage ? (
+                           <img
+                             src={`/uploads/${user.coverImage}`}
+                             alt="User Avatar"
+                             className="w-16 h-16 rounded-full border object-cover cursor-pointer"
+                           />
+                         ) : (
+                           <div className="w-16 h-16 rounded-full border bg-gray-300 flex items-center justify-center cursor-pointer">
+                             <span className="text-gray-600 font-bold text-xl">
+                               {user.username?.[0]?.toUpperCase() || "U"}
+                             </span>
+                           </div>
+                         )}
+                       </Popover.Trigger>
+         
+                       <Popover.Portal>
+                         <Popover.Content
+                           side="bottom"
+                           align="end"
+                           sideOffset={8}
+                           className="bg-white rounded-md shadow-lg p-4 w-48 z-50"
+                         >
+                           <div className="mb-2 text-gray-800 font-semibold text-center">
+                             {user.name} {user.surname}
+                           </div>
+                           <button
+                             onClick={handleLogout}
+                             className="w-full px-3 py-2 bg-red-600 text-white rounded hover:bg-red-800 transition"
+                           >
+                             Çıxış
+                           </button>
+                           <Popover.Arrow className="fill-white" />
+                         </Popover.Content>
+                       </Popover.Portal>
+                     </Popover.Root>
+                   </div>
         </div>
 
         <div className="mb-6">

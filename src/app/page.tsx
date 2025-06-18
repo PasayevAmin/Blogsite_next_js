@@ -3,14 +3,19 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import * as Popover from "@radix-ui/react-popover";
-import { userAgent } from "next/server";
+
+type Tag = {
+  id: number;
+  label: string;
+  color?: string;
+};
 
 type Post = {
   id: number;
   title: string;
-  tags?: { id: number; label: string; color?: string }[];
+  tags?: Tag[];
   author: {
-    id:number;
+    id: number;
     username: string;
   };
   createdAt: string;
@@ -20,79 +25,116 @@ type Post = {
   image?: string;
 };
 
+type User = {
+  id?: number;
+  username?: string;
+  role?: string;
+  name?: string;
+  surname?: string;
+  email?: string;
+  coverImage?: string;
+};
+
 export default function BlogPage() {
   const router = useRouter();
-
-  const [user, setUser] = useState<{
-    id?: number;
-    username?: string;
-    role?: string;
-    name?: string;
-    surname?: string;
-    email?: string;
-    coverImage?: string;
-  }>({});
-
+  const [user, setUser] = useState<User>({});
   const [posts, setPosts] = useState<Post[]>([]);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [loading, setLoading] = useState(false);
+
+  const fetchFollowedPosts = async (userId: number, pageNumber = 1) => {
+    if (loading || !hasMore) return;
+    setLoading(true);
+
+    try {
+      const res = await fetch("/api/following_post", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, page: pageNumber }),
+      });
+
+      if (!res.ok) throw new Error("Xəta baş verdi");
+
+      const data = await res.json();
+
+      if (data.posts.length < 10) {
+        setHasMore(false);
+      }
+
+      setPosts((prev) => {
+        const newPosts = data.posts.filter(
+          (p: Post) => !prev.some((existing) => existing.id === p.id)
+        );
+        return [...prev, ...newPosts];
+      });
+
+      setPage((prev) => prev + 1);
+    } catch (error) {
+      console.error("Postlar gətirilə bilmədi:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+      const storedUserJson = localStorage.getItem("user");
+      if (!storedUserJson) {
+        router.push("/login");
+        return;
+      }
 
+      const storedUser: User = JSON.parse(storedUserJson);
       if (!storedUser?.id) {
-        window.location.href = "/login";
-      } else {
-        setUser(storedUser);
-        fetchUserPosts();
+        router.push("/login");
+        return;
       }
+
+      setUser(storedUser);
+      fetchFollowedPosts(storedUser.id, 1);
     }
+  }, [router]);
 
-    async function fetchUserPosts() {
-      try {
-        const res = await fetch("/api/post", {
-          method: "GET",
-        });
-        if (!res.ok) throw new Error("Xəta baş verdi");
-
-        const data = await res.json();
-
-        setPosts(data.posts);
-      } catch (error) {
-        console.error(error);
+  // scroll-a qulaq as
+  useEffect(() => {
+    const handleScroll = () => {
+      if (
+        window.innerHeight + window.scrollY >= document.body.offsetHeight - 100 &&
+        !loading &&
+        hasMore
+      ) {
+        if (user.id) {
+          fetchFollowedPosts(user.id, page);
+        }
       }
-    }
-  }, []);
+    };
 
-  const goToHome = () => {
-    router.push("/");
-  };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [loading, hasMore, page, user.id]);
 
-  const goToProfile = () => {
-    router.push("/profile");
-  };
+  const goToHome = () => router.push("/");
+  const goToProfile = () => router.push("/profile");
 
   const handleLogout = async () => {
     try {
-      const res = await fetch("/api/auth/logout", {
-        method: "POST",
-      });
-
+      const res = await fetch("/api/auth/logout", { method: "POST" });
       if (res.ok) {
         localStorage.removeItem("user");
-        window.location.href = "/login";
+        router.push("/login");
       } else {
-        console.error("Çıxış uğursuz oldu.");
+        alert("Çıxış zamanı xəta baş verdi.");
       }
     } catch (error) {
       console.error("Çıxış zamanı xəta:", error);
     }
   };
 
-  // Unikal tag-ları çıxarırıq
   const uniqueTags = useMemo(() => {
-    const tagMap = new Map<number, { id: number; label: string }>();
-    posts.forEach(post => {
-      post.tags?.forEach(tag => {
+    const tagMap = new Map<number, Tag>();
+    posts.forEach((post) => {
+      post.tags?.forEach((tag) => {
         if (!tagMap.has(tag.id)) {
           tagMap.set(tag.id, tag);
         }
@@ -104,25 +146,20 @@ export default function BlogPage() {
   return (
     <div className="bg-gray-100 min-h-screen py-10">
       <div className="max-w-7xl mx-auto px-4">
+        {/* Header */}
         <div className="flex justify-between items-center mb-6 relative">
           <div className="text-center w-full">
             <h1 className="text-4xl font-bold mb-2">Blog</h1>
             <div className="space-x-4">
-              <a
-                onClick={goToHome}
-                className="hover:underline font-medium cursor-pointer "
-              >
+              <button onClick={goToHome} className="hover:underline font-medium ">
                 Home
-              </a>
-              <a
-                onClick={goToProfile}
-                className="text-blue-600 hover:underline font-medium cursor-pointer"
-              >
+              </button>
+              <button onClick={goToProfile} className="hover:underline font-medium text-blue-600">
                 Profile
-              </a>
-              <a className="text-blue-600 hover:underline font-medium cursor-pointer">
+              </button>
+              <button onClick={() => router.push("/explore")} className="hover:underline font-medium text-blue-600">
                 Explore
-              </a>
+              </button>
             </div>
           </div>
 
@@ -171,6 +208,7 @@ export default function BlogPage() {
           </div>
         </div>
 
+        {/* Main Content */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-10">
             {posts.map((post) => (
@@ -206,8 +244,8 @@ export default function BlogPage() {
                           year: "numeric",
                         })}
                       </span>
-                      <span className="cursor-pointer">❤️ {post.likes}</span>
-                      <span className="cursor-pointer">💬 {post.comments}</span>
+                      <span>❤️ {post.likes}</span>
+                      <span>💬 {post.comments}</span>
                     </div>
                     <p className="text-gray-700 mb-4">
                       {post.content.length > 100
@@ -222,11 +260,11 @@ export default function BlogPage() {
                         Read More
                       </button>
 
-                      {post?.tags && post?.tags.length > 0 && (
+                      {post.tags && post.tags.length > 0 && (
                         <div className="flex flex-wrap gap-2 mt-4">
-                          {post.tags.map((tag, index) => (
+                          {post.tags.map((tag) => (
                             <span
-                              key={index}
+                              key={tag.id}
                               onClick={() => router.push(`/tag/${tag.id}`)}
                               className="text-white text-xs font-medium px-2 py-1 rounded bg-blue-500 cursor-pointer hover:opacity-80 transition"
                             >
@@ -240,8 +278,16 @@ export default function BlogPage() {
                 </div>
               </div>
             ))}
+
+            {loading && (
+              <div className="text-center text-gray-500 font-medium mt-6">Yüklənir...</div>
+            )}
+            {!hasMore && (
+              <div className="text-center text-gray-400 font-medium mt-6">Daha çox post yoxdur.</div>
+            )}
           </div>
 
+          {/* Sidebar */}
           <div className="space-y-6">
             <div className="bg-white p-6 rounded shadow">
               <h3 className="text-lg font-bold mb-2">Search</h3>

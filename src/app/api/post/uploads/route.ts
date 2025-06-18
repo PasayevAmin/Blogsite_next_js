@@ -16,12 +16,13 @@ export async function POST(req: NextRequest) {
   const uploadDir = join(process.cwd(), "public", "blog");
   await mkdir(uploadDir, { recursive: true });
 
-  // ✅ Mövcud faylların siyahısı alınır
-  const files = await readdir(uploadDir);
-  const imageCount = files.length + 1;
+  const ext = extname(file.name) || ".jpg";
 
-  const ext = extname(file.name) || ".jpg"; // əgər uzantı yoxdursa, ".jpg" qəbul et
-  const newFileName = `${imageCount}${ext}`;
+  // ✅ 5 rəqəmli təsadüfi ədəd yaradılır
+  const randomCode = Math.floor(10000 + Math.random() * 90000); // 10000–99999
+
+  // ✅ Yeni fayl adı
+  const newFileName = `${randomCode}${ext}`;
   const filePath = join(uploadDir, newFileName);
 
   await writeFile(filePath, buffer);
