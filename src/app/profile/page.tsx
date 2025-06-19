@@ -11,13 +11,13 @@ type Post = {
   title: string;
   category?: string;
   author: {
-    id:string;
+    id: string;
     username: string;
   };
   createdAt: string;
   likes: number;
   comments: number;
-  tags:{ id: number; label: string; color?: string }[];
+  tags: { id: number; label: string; color?: string }[];
   content: string;
   image?: string;
 };
@@ -26,7 +26,81 @@ type Tag = {
   id: number;
   label: string;
 };
+function LikeButton({
+  postId,
+  likes,
+}: {
+  postId: number;
+  likes: { userId: number }[];
+}) {
+  const router = useRouter();
 
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+  const [liked, setLiked] = useState(false);
+  const [likesCount, setLikesCount] = useState(likes.length);
+  const [loading, setLoading] = useState(false);
+
+  // LocalStorage-dən istifadəçi ID-ni al
+  useEffect(() => {
+    const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+    if (!storedUser?.id) {
+      router.push("/login");
+    } else {
+      const id = Number(storedUser?.id);
+      setCurrentUserId(id);
+
+      const userLiked = likes.some((like) => like.userId === id);
+      setLiked(userLiked);
+    }
+  }, []);
+
+  async function toggleLike() {
+    if (loading) return;
+
+    if (!currentUserId) {
+      router.push("/login");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const res = await fetch(`/api/like/${postId}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ userId: currentUserId }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        setLiked(data.liked);
+        setLikesCount((count) => count + (data.liked ? 1 : -1));
+      } else {
+        alert(data.error || "Xəta baş verdi");
+      }
+    } catch {
+      alert("Xəta baş verdi");
+    }
+
+    setLoading(false);
+  }
+
+  return (
+    <button
+      onClick={toggleLike}
+      disabled={loading}
+      className={`flex items-center gap-1 px-3 py-1 rounded ${
+        liked ? "bg-red-600 text-white" : "bg-gray-300 text-black"
+      }`}
+      aria-label={liked ? "Unlike" : "Like"}
+    >
+      {liked ? "❤️" : "🤍"} {likesCount}
+    </button>
+  );
+}
 export default function Profile() {
   const router = useRouter();
 
@@ -127,9 +201,9 @@ export default function Profile() {
       console.error("Post yaradılmadı:", error);
       alert("Xəta baş verdi");
     }
-     
+
   }
-   const handleLogout = async () => {
+  const handleLogout = async () => {
     try {
       const res = await fetch("/api/auth/logout", { method: "POST" });
 
@@ -166,49 +240,49 @@ export default function Profile() {
               Explore
             </button>
           </div>
-         <div className="hidden sm:flex justify-end items-center space-x-4 mb-8 p-4">
-                     <span className="text-gray-700 font-semibold">
-                       Welcome, <strong>{user?.username}</strong>
-                     </span>
-         
-                     <Popover.Root>
-                       <Popover.Trigger asChild>
-                         {user.coverImage ? (
-                           <img
-                             src={`/uploads/${user.coverImage}`}
-                             alt="User Avatar"
-                             className="w-16 h-16 rounded-full border object-cover cursor-pointer"
-                           />
-                         ) : (
-                           <div className="w-16 h-16 rounded-full border bg-gray-300 flex items-center justify-center cursor-pointer">
-                             <span className="text-gray-600 font-bold text-xl">
-                               {user.username?.[0]?.toUpperCase() || "U"}
-                             </span>
-                           </div>
-                         )}
-                       </Popover.Trigger>
-         
-                       <Popover.Portal>
-                         <Popover.Content
-                           side="bottom"
-                           align="end"
-                           sideOffset={8}
-                           className="bg-white rounded-md shadow-lg p-4 w-48 z-50"
-                         >
-                           <div className="mb-2 text-gray-800 font-semibold text-center">
-                             {user.name} {user.surname}
-                           </div>
-                           <button
-                             onClick={handleLogout}
-                             className="w-full px-3 py-2 bg-red-600 text-white rounded hover:bg-red-800 transition"
-                           >
-                             Çıxış
-                           </button>
-                           <Popover.Arrow className="fill-white" />
-                         </Popover.Content>
-                       </Popover.Portal>
-                     </Popover.Root>
-                   </div>
+          <div className="hidden sm:flex justify-end items-center space-x-4 mb-8 p-4">
+            <span className="text-gray-700 font-semibold">
+              Welcome, <strong>{user?.username}</strong>
+            </span>
+
+            <Popover.Root>
+              <Popover.Trigger asChild>
+                {user.coverImage ? (
+                  <img
+                    src={`/uploads/${user.coverImage}`}
+                    alt="User Avatar"
+                    className="w-16 h-16 rounded-full border object-cover cursor-pointer"
+                  />
+                ) : (
+                  <div className="w-16 h-16 rounded-full border bg-gray-300 flex items-center justify-center cursor-pointer">
+                    <span className="text-gray-600 font-bold text-xl">
+                      {user.username?.[0]?.toUpperCase() || "U"}
+                    </span>
+                  </div>
+                )}
+              </Popover.Trigger>
+
+              <Popover.Portal>
+                <Popover.Content
+                  side="bottom"
+                  align="end"
+                  sideOffset={8}
+                  className="bg-white rounded-md shadow-lg p-4 w-48 z-50"
+                >
+                  <div className="mb-2 text-gray-800 font-semibold text-center">
+                    {user.name} {user.surname}
+                  </div>
+                  <button
+                    onClick={handleLogout}
+                    className="w-full px-3 py-2 bg-red-600 text-white rounded hover:bg-red-800 transition"
+                  >
+                    Çıxış
+                  </button>
+                  <Popover.Arrow className="fill-white" />
+                </Popover.Content>
+              </Popover.Portal>
+            </Popover.Root>
+          </div>
         </div>
 
         <div className="mb-6">
@@ -272,23 +346,27 @@ export default function Profile() {
                 <div className="flex justify-between items-center text-sm text-gray-500 mt-2">
                   <span >👤 {post.author.username}</span>
                   <div className="flex gap-3">
-                    <span>❤️ {post.likes}</span>
-                    <span>💬 {post.comments}</span>
+                      <LikeButton
+                      postId={post.id}
+                      likes={Array.isArray(post.likes) ? post.likes : []}
+                    />
+                   
+                    <span>💬 {post?.comments}</span>
                   </div>
                 </div>
-                 {post?.tags && post?.tags.length > 0 && (
-                        <div className="flex flex-wrap gap-2 mt-4">
-                          {post.tags.map((tag, index) => (
-                            <span
-                              key={index}
-                              onClick={() => router.push(`/tag/${tag.id}`)}
-                              className="text-white text-xs font-medium px-2 py-1 rounded bg-blue-500 cursor-pointer hover:opacity-80 transition"
-                            >
-                              {tag.label}
-                            </span>
-                          ))}
-                        </div>
-                      )}
+                {post?.tags && post?.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-4">
+                    {post.tags.map((tag, index) => (
+                      <span
+                        key={index}
+                        onClick={() => router.push(`/tag/${tag.id}`)}
+                        className="text-white text-xs font-medium px-2 py-1 rounded bg-blue-500 cursor-pointer hover:opacity-80 transition"
+                      >
+                        {tag.label}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           ))}
@@ -329,16 +407,28 @@ export default function Profile() {
                 ></textarea>
               </div>
 
-              <div>
-                <label className="block mb-1 font-semibold">Image</label>
+              <div className="mb-4">
+                <label className="block mb-2 font-semibold text-gray-700">Image</label>
+                <label
+                  htmlFor="file-upload"
+                  className="cursor-pointer inline-block rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 transition"
+                >
+                  Choose Image
+                </label>
                 <input
+                  id="file-upload"
                   type="file"
                   accept="image/*"
-                  onChange={(e) =>
-                    setFile(e.target.files ? e.target.files[0] : null)
-                  }
+                  className="hidden"
+                  onChange={(e) => setFile(e.target.files ? e.target.files[0] : null)}
                 />
+                {file && (
+                  <p className="mt-2 text-sm text-gray-600">
+                    Selected file: <span className="font-medium">{file.name}</span>
+                  </p>
+                )}
               </div>
+
 
               <div>
                 <label className="block mb-1 font-semibold">Tags</label>
@@ -355,14 +445,14 @@ export default function Profile() {
                         )
                       }
                       className={`px-3 py-1 rounded-full border ${selectedTags.includes(tag.id)
-                          ? "bg-blue-600 text-white"
-                          : "bg-gray-100 text-gray-700"
+                        ? "bg-blue-600 text-white"
+                        : "bg-gray-100 text-gray-700"
                         }`}
                     >
                       {tag.label}
                     </button>
                   ))}
-                  
+
                 </div>
               </div>
 

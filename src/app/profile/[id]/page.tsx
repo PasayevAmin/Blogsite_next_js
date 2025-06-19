@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 
+// --- Types
+
 type Post = {
   id: number;
   title: string;
@@ -10,10 +12,11 @@ type Post = {
   image?: string;
   tags?: { id: number; label: string; color?: string }[];
   author: {
+    id: number;
     username: string;
   };
   createdAt: string;
-  likes: number;
+  likes: { userId: number }[]; // Changed from number to array of objects
   comments: number;
   content: string;
 };
@@ -22,6 +25,88 @@ type Tag = {
   id: number;
   label: string;
 };
+
+
+
+function LikeButton({
+  postId,
+  likes,
+}: {
+  postId: number;
+  likes: { userId: number }[];
+}) {
+  const router = useRouter();
+
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+  const [liked, setLiked] = useState(false);
+  const [likesCount, setLikesCount] = useState(likes.length);
+  const [loading, setLoading] = useState(false);
+
+  // LocalStorage-dən istifadəçi ID-ni al
+  useEffect(() => {
+    const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+    if (!storedUser?.id) {
+      router.push("/login");
+    } else {
+      const id = Number(storedUser?.id);
+      setCurrentUserId(id);
+
+      const userLiked = likes.some((like) => like.userId === id);
+      setLiked(userLiked);
+    }
+  }, []);
+
+  async function toggleLike() {
+    if (loading) return;
+
+    if (!currentUserId) {
+      router.push("/login");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const res = await fetch(`/api/like/${postId}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ userId: currentUserId }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        setLiked(data.liked);
+        setLikesCount((count) => count + (data.liked ? 1 : -1));
+      } else {
+        alert(data.error || "Xəta baş verdi");
+      }
+    } catch {
+      alert("Xəta baş verdi");
+    }
+
+    setLoading(false);
+  }
+
+  return (
+    <button
+      onClick={toggleLike}
+      disabled={loading}
+      className={`flex items-center gap-1 px-3 py-1 rounded cursor-pointer${
+        liked ? "bg-red-600 text-white" : "bg-gray-300 text-black"
+      }`}
+      aria-label={liked ? "Unlike" : "Like"}
+    >
+      {liked ? "❤️" : "🤍"} {likesCount}
+    </button>
+  );
+}
+
+
+
+
 
 export default function Profile() {
   const router = useRouter();
@@ -39,13 +124,8 @@ export default function Profile() {
   }>({});
 
   const [posts, setPosts] = useState<Post[]>([]);
-  const [showCreateModal, setShowCreateModal] = useState(false);
-
-  const [newPostTitle, setNewPostTitle] = useState("");
-  const [newPostContent, setNewPostContent] = useState("");
   const [allTags, setAllTags] = useState<Tag[]>([]);
-  const [selectedTags, setSelectedTags] = useState<number[]>([]);
-  const [followed, setFollowed] = useState(false);
+  const [followed, setFollowed] = useState<boolean | null>(null);
 
   useEffect(() => {
     const userIdParam = params?.id;
@@ -80,8 +160,7 @@ export default function Profile() {
     try {
       const res = await fetch(`/api/profile/${userId}`);
       const data = await res.json();
-      setPosts(data.posts);
-
+      setPosts(data.posts.filter((p: Post) => p.author.id !== currentUserId));
       if (!!data.user.length) {
         setUser(data.user[0]);
       }
@@ -110,38 +189,10 @@ export default function Profile() {
           followingId: user.id,
         }),
       });
-
       const data = await res.json();
       setFollowed(data.isFollowing);
     } catch (error) {
       console.error("Follow status yoxlanılmadı:", error);
-    }
-  }
-
-  async function handleCreatePost(e: React.FormEvent) {
-    e.preventDefault();
-
-    try {
-      const res = await fetch("/api/post", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: newPostTitle,
-          content: newPostContent,
-          authorId: user.id,
-          tags: selectedTags,
-        }),
-      });
-
-      const data = await res.json();
-      setPosts((prev) => [data.post, ...prev]);
-      setNewPostTitle("");
-      setNewPostContent("");
-      setSelectedTags([]);
-      setShowCreateModal(false);
-    } catch (error) {
-      console.error("Post yaradılmadı:", error);
-      alert("Xəta baş verdi");
     }
   }
 
@@ -158,7 +209,7 @@ export default function Profile() {
     });
 
     if (res.ok) {
-      setFollowed(!followed);
+      setFollowed((prev) => !prev);
     } else {
       console.error("Follow/Unfollow əməliyyatı uğursuz oldu");
     }
@@ -170,16 +221,10 @@ export default function Profile() {
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-4xl font-bold">Blog</h1>
           <div className="space-x-4">
-            <button
-              onClick={() => router.push("/")}
-              className="text-blue-600 hover:underline font-medium"
-            >
+            <button onClick={() => router.push("/")} className="text-blue-600 hover:underline font-medium">
               Home
             </button>
-           
-            <button className="text-blue-600 hover:underline font-medium">
-              Explore
-            </button>
+            <button className="text-blue-600 hover:underline font-medium">Explore</button>
           </div>
 
           {user?.username && (
@@ -189,19 +234,13 @@ export default function Profile() {
                   <strong>{user.username}</strong>
                 </span>
                 {user.coverImage && (
-                  <img
-                    src={`/uploads/${user.coverImage}`}
-                    alt="User Avatar"
-                    className="w-16 h-16 rounded-full border object-cover"
-                  />
+                  <img src={`/uploads/${user.coverImage}`} alt="User Avatar" className="w-16 h-16 rounded-full border object-cover" />
                 )}
               </div>
-              {currentUserId !== user.id && (
+              {currentUserId !== user.id && followed !== null && (
                 <button
-                  onClick={() => handleFollowToggle()}
-                  className={`px-5 py-2 rounded-full font-medium text-sm transition duration-300 ${followed
-                    ? "bg-gray-300 text-gray-700 hover:bg-gray-400"
-                    : "bg-blue-600 text-white hover:bg-blue-700"
+                  onClick={handleFollowToggle}
+                  className={`px-5 py-2 rounded-full font-medium text-sm transition duration-300 ${followed ? "bg-gray-300 text-gray-700 hover:bg-gray-400" : "bg-blue-600 text-white hover:bg-blue-700"
                     }`}
                 >
                   {followed ? "Following" : "Follow"}
@@ -211,13 +250,9 @@ export default function Profile() {
           )}
         </div>
 
-        {/* Posts */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {posts.length === 0 && (
-            <p className="col-span-full text-gray-500 text-center">
-              No posts found.
-            </p>
-          )}
+          {posts.length === 0 && <p className="col-span-full text-gray-500 text-center">No posts found.</p>}
+
           {posts.map((post) => (
             <div
               key={post.id}
@@ -226,50 +261,41 @@ export default function Profile() {
               <div className="p-5 flex flex-col gap-3">
                 <div className="flex items-center justify-between text-sm text-gray-400">
                   {post.category && (
-                    <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-xs">
-                      {post.category}
-                    </span>
+                    <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-xs">{post.category}</span>
                   )}
-                  <span>
-                    {new Date(post.createdAt).toLocaleDateString("az-AZ", {
-                      year: "numeric",
-                      month: "short",
-                      day: "numeric",
-                    })}
-                  </span>
+                  <span>{new Date(post.createdAt).toLocaleDateString("az-AZ", { year: "numeric", month: "short", day: "numeric" })}</span>
                 </div>
-                <div>
-                  {post.image && (
-                    <img
-                      src={`/blog/${post.image}`}
-                      alt={post.title}
-                      className="w-full h-60 object-cover"
-                      onClick={() => router.push(`/post/${post.id}`)}
-                    />
-                  )}
-                </div>
-                <h2
-                  className="text-xl font-semibold text-gray-800"
-                  onClick={() => router.push(`/post/${post.id}`)}
-                >
+
+                {post.image && (
+                  <img
+                    src={`/blog/${post.image}`}
+                    alt={post.title}
+                    className="w-full h-60 object-cover"
+                    onClick={() => router.push(`/post/${post.id}`)}
+                  />
+                )}
+
+                <h2 className="text-xl font-semibold text-gray-800" onClick={() => router.push(`/post/${post.id}`)}>
                   {post.title}
                 </h2>
+
                 <p className="text-gray-600 text-sm">
-                  {post.content.length > 100
-                    ? post.content.slice(0, 100) + "..."
-                    : post.content}
+                  {post.content.length > 100 ? post.content.slice(0, 100) + "..." : post.content}
                 </p>
+
                 <div className="flex justify-between items-center text-sm text-gray-500 mt-2">
                   <span
                     className="hover:underline text-blue-600 cursor-pointer"
-                    onClick={() =>
-                      router.push(`/profile/${post.author.username}`)
-                    }
+                    onClick={() => router.push(`/profile/${post.author.username}`)}
                   >
                     👤 {post.author.username}
                   </span>
-                  <div className="flex gap-3">
-                    <span>❤️ {post.likes}</span>
+                  <div className="cursor-pointer flex gap-3 ">
+                    <LikeButton
+                      postId={post.id}
+                      likes={post.likes}
+                    />
+
                     <span>💬 {post.comments}</span>
                   </div>
                 </div>

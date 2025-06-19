@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
     const posts = await prisma.post.findMany({
       where: {
         authorId: {
-          in: followingIds,
+          in: [...followingIds, userId],
         },
       },
       include: {
@@ -41,11 +41,14 @@ export async function POST(req: NextRequest) {
           },
         },
         tags: true,
+        likes:true,
+        comments:true
       },
       orderBy: {
-        createdAt: "asc",
+        createdAt: "desc",
       },
     });
+
 
     return NextResponse.json({ posts });
   } catch (error) {
@@ -53,4 +56,3 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Xəta baş verdi" }, { status: 500 });
   }
 }
- 

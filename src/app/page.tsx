@@ -19,8 +19,8 @@ type Post = {
     username: string;
   };
   createdAt: string;
-  likes: number;
-  comments: number;
+   likes: { userId: number }[];
+  // comments: { id: number; userId: number; postId: number; createdAt: string }[];
   content: string;
   image?: string;
 };
@@ -34,6 +34,76 @@ type User = {
   email?: string;
   coverImage?: string;
 };
+
+
+
+function LikeButton({
+  postId,
+  likes,
+  currentUserId,
+}: {
+  postId: number;
+  likes: { userId: number }[];
+  currentUserId?: number;
+}) {
+  const router = useRouter();
+
+  const [liked, setLiked] = useState(
+    currentUserId ? likes.some((like) => like.userId === currentUserId) : false
+  );
+  const [likesCount, setLikesCount] = useState(likes.length);
+  const [loading, setLoading] = useState(false);
+
+  async function toggleLike() {
+    if (loading) return;
+
+    if (!currentUserId) {
+      router.push("/login");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const res = await fetch(`/api/like/${postId}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ userId: currentUserId }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        setLiked(data.liked);
+        setLikesCount((count) => count + (data.liked ? 1 : -1));
+      } else {
+        alert(data.error || "Xəta baş verdi");
+      }
+    } catch {
+      alert("Xəta baş verdi");
+    }
+
+    setLoading(false);
+  }
+
+  return (
+    <button
+      onClick={toggleLike}
+      disabled={loading}
+      className={`flex items-center gap-1 px-3 py-1 rounded cursor-pointer ${
+        liked ? "bg-red-600 text-white" : "bg-gray-300 text-black"
+      }`}
+      aria-label={liked ? "Unlike" : "Like"}
+    >
+      {liked ? "❤️" : "🤍"} {likesCount}
+    </button>
+  );
+}
+
+
+
 
 export default function BlogPage() {
   const router = useRouter();
@@ -57,7 +127,7 @@ export default function BlogPage() {
       if (!res.ok) throw new Error("Xəta baş verdi");
 
       const data = await res.json();
-
+console.log(data)
       if (data.posts.length < 10) {
         setHasMore(false);
       }
@@ -237,15 +307,19 @@ export default function BlogPage() {
                         👤 <strong>{post.author.username}</strong>
                       </span>
                       <span>
-                        📅{" "}
+                        📅{" "} {}
                         {new Date(post.createdAt).toLocaleDateString("az-AZ", {
                           day: "2-digit",
                           month: "long",
                           year: "numeric",
                         })}
                       </span>
-                      <span>❤️ {post.likes}</span>
-                      <span>💬 {post.comments}</span>
+                       <LikeButton 
+                    postId={post.id}
+                    likes={post.likes}
+                    currentUserId={user?.id}
+                  />
+                      {/* <span>💬 {post.comments}</span> */}
                     </div>
                     <p className="text-gray-700 mb-4">
                       {post.content.length > 100

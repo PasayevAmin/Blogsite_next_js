@@ -9,28 +9,97 @@ type Post = {
   id: number;
   title: string;
   category?: string;
-  tags:{
-    id:number;
-    label:string;
-    color:string;
-  }[]
+  tags: {
+    id: number;
+    label: string;
+    color: string;
+  }[];
   author: {
-    id:number;
+    id: number;
     username: string;
   };
   createdAt: string;
-  likes: number;
+  likes: { userId: number }[];  // Likes - array userId-lərlə
   comments: number;
   content: string;
   image?: string;
 };
 
+type User = {
+  id?: number;
+};
+
+function LikeButton({
+  postId,
+  likes,
+  currentUserId,
+}: {
+  postId: number;
+  likes: { userId: number }[];
+  currentUserId?: number;
+}) {
+  const router = useRouter();
+
+  const [liked, setLiked] = useState(
+    currentUserId ? likes.some((like) => like.userId === currentUserId) : false
+  );
+  const [likesCount, setLikesCount] = useState(likes.length);
+  const [loading, setLoading] = useState(false);
+
+  async function toggleLike() {
+    if (loading) return;
+
+    if (!currentUserId) {
+      router.push("/login");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const res = await fetch(`/api/like/${postId}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ userId: currentUserId }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        setLiked(data.liked);
+        setLikesCount((count) => count + (data.liked ? 1 : -1));
+      } else {
+        alert(data.error || "Xəta baş verdi");
+      }
+    } catch {
+      alert("Xəta baş verdi");
+    }
+
+    setLoading(false);
+  }
+
+  return (
+    <button
+      onClick={toggleLike}
+      disabled={loading}
+      className={`flex items-center gap-1 px-3 py-1 rounded cursor-pointer ${liked ? "bg-red-600 text-white" : "bg-gray-300 text-black"
+        }`}
+      aria-label={liked ? "Unlike" : "Like"}
+    >
+      {liked ? "❤️" : "🤍"} {likesCount}
+    </button>
+  );
+}
+
 export default function Details() {
-  const router=useRouter()
+  const router = useRouter();
   const params = useParams();
   const tagId = params?.id;
+
+  const [user, setUser] = useState<User>({});
   const [posts, setPosts] = useState<Post[]>([]);
-  const [showModal, setShowModal] = useState(false);
 
   async function fetchUserPostfortag(tagId: number) {
     try {
@@ -39,6 +108,7 @@ export default function Details() {
 
       const data = await res.json();
       setPosts(data.posts);
+      console.log(data.posts)
     } catch (error) {
       console.error(error);
     }
@@ -46,10 +116,19 @@ export default function Details() {
 
   useEffect(() => {
     if (!tagId) return;
-
     const id = Number(tagId);
     if (!isNaN(id)) {
       fetchUserPostfortag(id);
+    }
+
+    if (typeof window !== "undefined") {
+      const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+
+      if (!storedUser?.id) {
+        window.location.href = "/login";
+      } else {
+        setUser(storedUser);
+      }
     }
   }, [tagId]);
 
@@ -59,14 +138,29 @@ export default function Details() {
         Yüklənir…
       </div>
     );
+  }
 
+  // Function to navigate to home page
+  function goToHome() {
+    router.push("/");
   }
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-6 text-center text-gray-800">
+      <h1 className="text-3xl font-bold mb-2 text-center text-gray-800">
         Etiketə görə yazılar
       </h1>
+
+      {/* Home düyməsi - başlıq altı, ortalanmış, mavi rəngli */}
+      <div className="text-center mb-6">
+        <button
+          onClick={goToHome}
+          className="text-blue-600 hover:underline font-semibold text-lg px-4 py-2 cursor-pointer"
+        >
+          Ana səhifəyə qayıt
+        </button>
+      </div>
+
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {posts.length === 0 && (
@@ -82,8 +176,7 @@ export default function Details() {
           >
             {post.image && (
               <img
-            onClick={()=>router.push(`/post/${post.id}`)}
-
+                onClick={() => router.push(`/post/${post.id}`)}
                 src={`/blog/${post.image}`}
                 alt={post.title}
                 className="w-full h-60 object-cover"
@@ -91,19 +184,18 @@ export default function Details() {
             )}
             <div className="p-5 flex flex-col gap-3">
               <div className="flex items-center justify-between text-sm text-gray-400">
-                 {post?.tags && post?.tags.length > 0 && (
-                        <div className="flex flex-wrap gap-2 mt-4">
-                          {post.tags.map((tag, index) => (
-                            <span
-                              key={index}
-                              
-                              className="text-white text-xs font-medium px-2 py-1 rounded bg-blue-500 cursor-pointer hover:opacity-80 transition"
-                            >
-                              {tag.label}
-                            </span>
-                          ))}
-                        </div>
-                      )}
+                {post?.tags && post?.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-4">
+                    {post.tags.map((tag, index) => (
+                      <span
+                        key={index}
+                        className="text-white text-xs font-medium px-2 py-1 rounded bg-blue-500 cursor-pointer hover:opacity-80 transition"
+                      >
+                        {tag.label}
+                      </span>
+                    ))}
+                  </div>
+                )}
                 <span>
                   {new Date(post.createdAt).toLocaleDateString("az-AZ", {
                     year: "numeric",
@@ -113,24 +205,43 @@ export default function Details() {
                 </span>
               </div>
 
-              <h2 
-            onClick={()=>router.push(`/post/${post.id}`)}
-              className="text-xl font-semibold text-gray-800">
+              <h2
+                onClick={() => router.push(`/post/${post.id}`)}
+                className="text-xl font-semibold text-gray-800"
+              >
                 {post.title}
               </h2>
 
-              <p 
-            onClick={()=>router.push(`/post/${post.id}`)}
-               className="text-gray-600 text-sm">
+              <p
+                onClick={() => router.push(`/post/${post.id}`)}
+                className="text-gray-600 text-sm"
+              >
                 {post.content.length > 100
                   ? post.content.slice(0, 100) + "..."
                   : post.content}
               </p>
 
               <div className="flex justify-between items-center text-sm text-gray-500 mt-2">
-                <span onClick={() => router.push(`/profile/${post.author.id}`)}>👤 {post.author.username}</span>
-                <div className="flex gap-3">
-                  <span>❤️ {post.likes}</span>
+                <span
+                  onClick={() => {
+                    const currentUserId = user?.id; // daxil olmuş istifadəçi id-si
+                    const authorId = post.author.id;
+
+                    if (currentUserId === authorId) {
+                      router.push("/profile");
+                    } else {
+                      router.push(`/profile/${authorId}`);
+                    }
+                  }}
+                >
+                  👤 <strong>{post.author.username}</strong>
+                </span>
+                <div className="cursor-pointer flex gap-3 items-center">
+                  <LikeButton
+                    postId={post.id}
+                    likes={post.likes}
+                    currentUserId={user?.id}
+                  />
                   <span>💬 {post.comments}</span>
                 </div>
               </div>
