@@ -114,7 +114,24 @@ export default function Details() {
     }
   }
 
-  useEffect(() => {
+
+  const Commentchange=()=>{
+if (!tagId) return;
+    const id = Number(tagId);
+    if (!isNaN(id)) {
+      fetchUserPostfortag(id);
+    }
+
+    if (typeof window !== "undefined") {
+      const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+      if (!storedUser?.id) {
+        window.location.href = "/login";
+      } else {
+        setUser(storedUser);
+      }
+    }
+  }
+ useEffect(() => {
     if (!tagId) return;
     const id = Number(tagId);
     if (!isNaN(id)) {
@@ -130,6 +147,7 @@ export default function Details() {
       }
     }
   }, [tagId, reloadCommentCount]);
+ 
 
   if (!posts) {
     return (
@@ -281,7 +299,7 @@ export default function Details() {
               <div className="mb-4 text-lg font-semibold">
                 👤 {posts.find(p => p.id === activeCommentPostId)?.author.username}
               </div>
-              <CommentSection postId={activeCommentPostId}  />
+              <CommentSection postId={activeCommentPostId} fetchFollowedPosts={()=>Commentchange()}  />
             </div>
           </div>
         </div>

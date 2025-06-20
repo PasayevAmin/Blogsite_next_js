@@ -20,8 +20,14 @@ export async function GET(req: NextRequest) {
         createdAt: "desc",
       },
     });
+    const sortedPosts = posts
+  .map((post) => ({
+    ...post,
+    totalScore: post.likes.length + post.comments.length,
+  }))
+  .sort((a, b) => b.totalScore - a.totalScore); 
 
-    return NextResponse.json({ posts });
+    return NextResponse.json({posts: sortedPosts });
   } catch (error) {
     console.error("Error fetching posts:", error);
     return NextResponse.json(

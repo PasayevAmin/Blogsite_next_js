@@ -33,6 +33,9 @@ if (isNaN(tagId) || tagId <= 0) {
           select: { id: true, username: true, image: true },
         },
       },
+       orderBy: {
+        createdAt: "desc",
+      },
     });
 
     return new Response(

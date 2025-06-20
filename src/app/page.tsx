@@ -5,6 +5,8 @@ import { useEffect, useMemo, useState } from "react";
 import * as Popover from "@radix-ui/react-popover";
 import { Home, User, Compass, Heart } from "lucide-react";
 import dynamic from "next/dynamic";
+import { Toaster } from "react-hot-toast";
+import { notifySuccess } from "@/lib/toast/toasthelper";
 const CommentSection = dynamic(() => import("@/app/comment/page"), { ssr: false });
 type Tag = {
   id: number;
@@ -117,42 +119,44 @@ export default function BlogPage() {
   const [activeCommentPostId, setActiveCommentPostId] = useState<number | null>(null);
   const [reloadCommentCount, setReloadCommentCount] = useState(0);
 
-  const fetchFollowedPosts = async (userId: number, pageNumber = 1) => {
-    if (loading || !hasMore) return;
-    setLoading(true);
+const fetchFollowedPosts = async (userId: number, pageNumber = 1, ) => {
+  if ((loading || !hasMore)) return;
 
-    try {
-      const res = await fetch("/api/following_post", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, page: pageNumber }),
-      });
+  setLoading(true);
 
-      if (!res.ok) throw new Error("Xəta baş verdi");
+  try {
+    const res = await fetch("/api/following_post", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId, page: pageNumber }),
+    });
 
-      const data = await res.json();
-      console.log(data)
-      if (data.posts.length < 10) {
-        setHasMore(false);
-      }
+    if (!res.ok) throw new Error("Xəta baş verdi");
 
-      setPosts((prev) => {
-        const newPosts = data.posts.filter(
-          (p: Post) => !prev.some((existing) => existing.id === p.id)
-        );
-        return [...prev, ...newPosts];
-      });
+    const data = await res.json();
 
-      setPage((prev) => prev + 1);
-    } catch (error) {
-      console.error("Postlar gətirilə bilmədi:", error);
-    } finally {
-      setLoading(false);
+    if (data.posts.length < 10) {
+      setHasMore(false);
     }
-  };
 
-  useEffect(() => {
-    if (typeof window !== "undefined") {
+    setPosts((prev) => {
+      const newPosts = data.posts.filter(
+        (p: Post) => !prev.some((existing) => existing.id === p.id)
+      );
+      return [...prev, ...newPosts];
+    });
+
+    setPage((prev) => prev + 1);
+  } catch (error) {
+    console.error("Postlar gətirilə bilmədi:", error);
+  } finally {
+    setLoading(false);
+  }
+};
+
+const fetchCommentsf=()=>{
+  if (typeof window !== "undefined") {
+
       const storedUserJson = localStorage.getItem("user");
       if (!storedUserJson) {
         router.push("/login");
@@ -168,7 +172,16 @@ export default function BlogPage() {
       setUser(storedUser);
       fetchFollowedPosts(storedUser.id, 1);
     }
-  }, [router]);
+}
+  useEffect(() => {
+    
+    fetchCommentsf()
+  }, [router,reloadCommentCount]);
+const handleModalClose = () => {
+    setActiveCommentPostId(null);
+    setReloadCommentCount((prev) => prev + 1);
+  };
+
 
   // scroll-a qulaq as
   useEffect(() => {
@@ -198,6 +211,7 @@ export default function BlogPage() {
       if (res.ok) {
         localStorage.removeItem("user");
         router.push("/login");
+        notifySuccess("Çıxış Olundu!🎉")
       } else {
         alert("Çıxış zamanı xəta baş verdi.");
       }
@@ -217,10 +231,7 @@ export default function BlogPage() {
     });
     return Array.from(tagMap.values());
   }, [posts]);
-  const handleModalClose = () => {
-    setActiveCommentPostId(null);
-    setReloadCommentCount((prev) => prev + 1);
-  };
+  
   return (
     <div className="bg-gray-100 min-h-screen py-10">
       <div className="max-w-7xl mx-auto px-4">
@@ -336,11 +347,11 @@ export default function BlogPage() {
                           year: "numeric",
                         })}
                       </span>
-                      <LikeButton
-                        postId={post.id}
-                        likes={post.likes}
-                        currentUserId={user?.id}
-                      />
+                        <LikeButton
+                          postId={post.id}
+                          likes={post.likes}
+                          currentUserId={user?.id}
+                        />
                       <span onClick={() => setActiveCommentPostId(post.id)}>💬 {post.comments.length}</span>
                     </div>
                     <p className="text-gray-700 mb-4">
@@ -444,13 +455,15 @@ export default function BlogPage() {
 
 
 
-                <CommentSection postId={activeCommentPostId} />
+                <CommentSection postId={activeCommentPostId} fetchFollowedPosts={()=>fetchCommentsf()}/>
               </div>
             </div>
 
           </div>
         </div>
       )}
+      <Toaster />
+      
     </div>
   );
 }

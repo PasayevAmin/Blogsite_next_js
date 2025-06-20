@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import CommentSection from "@/app/comment/page";
+import { Compass, Home, User } from "lucide-react";
 
 // --- Types
 
@@ -17,7 +19,7 @@ type Post = {
   };
   createdAt: string;
   likes: { userId: number }[]; // Changed from number to array of objects
-  comments: number;
+  comments: { id: number; userId: number; postId: number; createdAt: string }[];
   content: string;
 };
 
@@ -31,30 +33,19 @@ type Tag = {
 function LikeButton({
   postId,
   likes,
+  currentUserId,
 }: {
   postId: number;
   likes: { userId: number }[];
+  currentUserId?: number;
 }) {
   const router = useRouter();
 
-  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
-  const [liked, setLiked] = useState(false);
+  const [liked, setLiked] = useState(
+    currentUserId ? likes.some((like) => like.userId === currentUserId) : false
+  );
   const [likesCount, setLikesCount] = useState(likes.length);
   const [loading, setLoading] = useState(false);
-
-  // LocalStorage-dən istifadəçi ID-ni al
-  useEffect(() => {
-    const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
-    if (!storedUser?.id) {
-      router.push("/login");
-    } else {
-      const id = Number(storedUser?.id);
-      setCurrentUserId(id);
-
-      const userLiked = likes.some((like) => like.userId === id);
-      setLiked(userLiked);
-    }
-  }, []);
 
   async function toggleLike() {
     if (loading) return;
@@ -94,9 +85,8 @@ function LikeButton({
     <button
       onClick={toggleLike}
       disabled={loading}
-      className={`flex items-center gap-1 px-3 py-1 rounded cursor-pointer${
-        liked ? "bg-red-600 text-white" : "bg-gray-300 text-black"
-      }`}
+      className={`flex items-center gap-1 px-3 py-1 rounded cursor-pointer ${liked ? "bg-red-600 text-white" : "bg-gray-300 text-black"
+        }`}
       aria-label={liked ? "Unlike" : "Like"}
     >
       {liked ? "❤️" : "🤍"} {likesCount}
@@ -112,7 +102,8 @@ export default function Profile() {
   const router = useRouter();
   const params = useParams();
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
-
+const [activeCommentPostId, setActiveCommentPostId] = useState<number | null>(null);
+  const [reloadCommentCount, setReloadCommentCount] = useState(0);
   const [user, setUser] = useState<{
     id?: number;
     username?: string;
@@ -149,6 +140,28 @@ export default function Profile() {
       }
     }
   }, []);
+  const Commentchange=()=>{
+    const userIdParam = params?.id;
+    const userId = userIdParam ? Number(userIdParam) : undefined;
+
+    if (userId !== undefined && !isNaN(userId)) {
+      fetchUserPosts(userId);
+    }
+
+    fetchTags();
+
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      try {
+        const parsedUser = JSON.parse(storedUser);
+        if (parsedUser?.id) {
+          setCurrentUserId(parsedUser.id);
+        }
+      } catch (error) {
+        console.error("Invalid user object in localStorage");
+      }
+    }
+  }
 
   useEffect(() => {
     if (currentUserId && user.id && currentUserId !== user.id) {
@@ -214,17 +227,39 @@ export default function Profile() {
       console.error("Follow/Unfollow əməliyyatı uğursuz oldu");
     }
   };
-
+const handleModalClose = () => {
+    setActiveCommentPostId(null);
+    setReloadCommentCount((prev) => prev + 1);
+  };
   return (
     <div className="bg-gray-100 min-h-screen py-10">
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-4xl font-bold">Blog</h1>
-          <div className="space-x-4">
-            <button onClick={() => router.push("/")} className="text-blue-600 hover:underline font-medium">
-              Home
+          <div className="flex justify-center gap-8">
+            <button
+              onClick={() => router.push(`/`)}
+              className="flex items-center gap-2 text-blue-700 hover:text-blue-600 transition"
+            >
+              <Home className="w-5 h-5" />
+              <span className="font-medium text-base">Home</span>
             </button>
-            <button className="text-blue-600 hover:underline font-medium">Explore</button>
+
+            <button
+              onClick={() => router.push(`/profile`)}
+              className="flex items-center gap-2 text-blue-700 hover:text-blue-600 transition"
+            >
+              <User className="w-5 h-5" />
+              <span className="font-medium text-base">Profile</span>
+            </button>
+
+            <button
+              onClick={() => router.push(`/explore`)}
+              className="flex items-center gap-2 text-blue-700 hover:text-gray-600 transition"
+            >
+              <Compass className="w-5 h-5" />
+              <span className="font-medium text-base">Explore</span>
+            </button>
           </div>
 
           {user?.username && (
@@ -291,12 +326,13 @@ export default function Profile() {
                     👤 {post.author.username}
                   </span>
                   <div className="cursor-pointer flex gap-3 ">
-                    <LikeButton
+                   <LikeButton
                       postId={post.id}
                       likes={post.likes}
+                      currentUserId={user?.id}
                     />
 
-                    <span>💬 {post.comments}</span>
+                    <span onClick={() => setActiveCommentPostId(post.id)}>💬 {post.comments.length}</span>
                   </div>
                 </div>
 
@@ -318,6 +354,33 @@ export default function Profile() {
           ))}
         </div>
       </div>
+        {activeCommentPostId && (
+        <div className="fixed inset-0 z-50 flex justify-center items-center  bg-opacity-50 backdrop-blur-sm">
+          <div className="bg-white w-full max-w-5xl h-[80vh] rounded-2xl flex overflow-hidden relative">
+            <button
+              onClick={handleModalClose}
+              className="absolute top-3 right-4 text-xl text-gray-600 hover:text-black"
+            >
+              ✖
+            </button>
+
+            <div className="w-1/2 ">
+              <img
+                src={`/blog/${posts.find(p => p.id === activeCommentPostId)?.image}`}
+                alt="Post"
+                className="w-full h-full object-cover"
+              />
+            </div>
+
+            <div className="w-1/2 p-6 overflow-y-auto">
+              <div className="mb-4 text-lg font-semibold">
+                👤 {posts.find(p => p.id === activeCommentPostId)?.author.username}
+              </div>
+              <CommentSection postId={activeCommentPostId} fetchFollowedPosts={()=>Commentchange()}  />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

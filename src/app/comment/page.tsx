@@ -11,7 +11,7 @@ type Comment = {
   createdAt: string;
 };
 
-export default function CommentSection({ postId }: { postId: number }) {
+export default function CommentSection({ postId ,fetchFollowedPosts}: { postId: number,fetchFollowedPosts:()=>void }) {
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState("");
   const [loading, setLoading] = useState(false);
@@ -49,6 +49,7 @@ export default function CommentSection({ postId }: { postId: number }) {
       if (res.ok) {
         setNewComment("");
         fetchComments(); // yenidən yüklə
+        fetchFollowedPosts()
       } else {
         alert("Şərh göndərilə bilmədi.");
       }

@@ -3,8 +3,9 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
-import toast, { Toaster } from 'react-hot-toast';
+import  { Toaster } from 'react-hot-toast';
 import { notifySuccess, notifyError } from '@/lib/toast/toasthelper'
+import { setTimeout } from "node:timers";
 export default function LoginPage() {
   const router = useRouter();
 
@@ -51,9 +52,10 @@ export default function LoginPage() {
 
         );
 
-        setMessage("Giriş uğurludur!");
 
+        setMessage("Giriş uğurludur!");
         router.push("/");
+        notifySuccess("Giriş edildi!🎉") 
       } else {
         setMessage(data.message || "Email və ya şifrə yanlışdır.");
 

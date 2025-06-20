@@ -1,5 +1,6 @@
 "use client";
 
+import CommentSection from "@/app/comment/page";
 import { useParams } from "next/navigation";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -106,7 +107,8 @@ export default function Details() {
   const postId = params?.id;
   const [post, setPost] = useState<Post | null>(null);
   const [showModal, setShowModal] = useState(false);
-
+const [activeCommentPostId, setActiveCommentPostId] = useState<number | null>(null);
+  const [reloadCommentCount, setReloadCommentCount] = useState(0);
   async function fetchUserPost(id: number) {
     try {
       const res = await fetch(`/api/post/${id}`);
@@ -128,10 +130,22 @@ export default function Details() {
       fetchUserPost(id);
     }
   }, [postId]);
+  const Commnetchange=()=>{
+     if (!postId) return;
+
+    const id = Number(postId);
+    if (!isNaN(id)) {
+      fetchUserPost(id);
+    }
+  }
 
   if (!post) {
     return <p className="text-center mt-10 text-gray-500">Yüklənir…</p>;
   }
+   const handleModalClose = () => {
+    setActiveCommentPostId(null);
+    setReloadCommentCount((prev) => prev + 1);
+  };
 
   return (
     <div className="max-w-4xl mx-auto py-10 px-4">
@@ -176,7 +190,7 @@ export default function Details() {
                     postId={post.id}
                     likes={post.likes}
                   />
-            <span className="cursor-pointer">💬 {post.comments.length}</span>
+            <span className="cursor-pointer"  onClick={() => setActiveCommentPostId(post.id)}>💬 {post.comments.length}</span>
           </div>
           <p className="text-gray-700 leading-relaxed text-lg mb-6">
             {post.content}
@@ -197,6 +211,33 @@ export default function Details() {
             className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg shadow-lg"
             onClick={(e) => e.stopPropagation()} // Modal içində klik close etməsin
           />
+        </div>
+      )}
+       {activeCommentPostId && (
+        <div className="fixed inset-0 z-50 flex justify-center items-center  bg-opacity-50 backdrop-blur-sm">
+          <div className="bg-white w-full max-w-5xl h-[80vh] rounded-2xl flex overflow-hidden relative">
+            <button
+              onClick={handleModalClose}
+              className="absolute top-3 right-4 text-xl text-gray-600 hover:text-black"
+            >
+              ✖
+            </button>
+
+            <div className="w-1/2 ">
+              <img
+                src={`/blog/${post?.image}`}
+                alt="Post"
+                className="w-full h-full object-cover"
+              />
+            </div>
+
+            <div className="w-1/2 p-6 overflow-y-auto">
+              <div className="mb-4 text-lg font-semibold">
+                👤 {post?.author.username}
+              </div>
+              <CommentSection postId={activeCommentPostId} fetchFollowedPosts={()=>Commnetchange()}  />
+            </div>
+          </div>
         </div>
       )}
     </div>
