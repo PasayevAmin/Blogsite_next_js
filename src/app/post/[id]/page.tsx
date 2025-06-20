@@ -19,7 +19,7 @@ type Post = {
   };
   createdAt: string;
   likes: { userId: number }[]; // Added likes property
-  // comments: number;
+comments: { id: number; userId: number; postId: number; createdAt: string }[];
   content: string;
   image?: string;
 };
@@ -176,8 +176,7 @@ export default function Details() {
                     postId={post.id}
                     likes={post.likes}
                   />
-            {/* <span className="cursor-pointer">❤️ {post.likes}</span>
-            <span className="cursor-pointer">💬 {post.comments}</span> */}
+            <span className="cursor-pointer">💬 {post.comments.length}</span>
           </div>
           <p className="text-gray-700 leading-relaxed text-lg mb-6">
             {post.content}

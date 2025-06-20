@@ -3,7 +3,9 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import * as Popover from "@radix-ui/react-popover";
-
+import { Home, User, Compass, Heart } from "lucide-react";
+import dynamic from "next/dynamic";
+const CommentSection = dynamic(() => import("@/app/comment/page"), { ssr: false });
 type Tag = {
   id: number;
   label: string;
@@ -19,8 +21,8 @@ type Post = {
     username: string;
   };
   createdAt: string;
-   likes: { userId: number }[];
-  // comments: { id: number; userId: number; postId: number; createdAt: string }[];
+  likes: { userId: number }[];
+  comments: { id: number; userId: number; postId: number; createdAt: string }[];
   content: string;
   image?: string;
 };
@@ -53,6 +55,7 @@ function LikeButton({
   );
   const [likesCount, setLikesCount] = useState(likes.length);
   const [loading, setLoading] = useState(false);
+
 
   async function toggleLike() {
     if (loading) return;
@@ -92,9 +95,8 @@ function LikeButton({
     <button
       onClick={toggleLike}
       disabled={loading}
-      className={`flex items-center gap-1 px-3 py-1 rounded cursor-pointer ${
-        liked ? "bg-red-600 text-white" : "bg-gray-300 text-black"
-      }`}
+      className={`flex items-center gap-1 px-3 py-1 rounded cursor-pointer ${liked ? "bg-red-600 text-white" : "bg-gray-300 text-black"
+        }`}
       aria-label={liked ? "Unlike" : "Like"}
     >
       {liked ? "❤️" : "🤍"} {likesCount}
@@ -112,6 +114,8 @@ export default function BlogPage() {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [activeCommentPostId, setActiveCommentPostId] = useState<number | null>(null);
+  const [reloadCommentCount, setReloadCommentCount] = useState(0);
 
   const fetchFollowedPosts = async (userId: number, pageNumber = 1) => {
     if (loading || !hasMore) return;
@@ -127,7 +131,7 @@ export default function BlogPage() {
       if (!res.ok) throw new Error("Xəta baş verdi");
 
       const data = await res.json();
-console.log(data)
+      console.log(data)
       if (data.posts.length < 10) {
         setHasMore(false);
       }
@@ -186,6 +190,7 @@ console.log(data)
 
   const goToHome = () => router.push("/");
   const goToProfile = () => router.push("/profile");
+  const gotoExplore = () => router.push("/explore")
 
   const handleLogout = async () => {
     try {
@@ -212,7 +217,10 @@ console.log(data)
     });
     return Array.from(tagMap.values());
   }, [posts]);
-
+  const handleModalClose = () => {
+    setActiveCommentPostId(null);
+    setReloadCommentCount((prev) => prev + 1);
+  };
   return (
     <div className="bg-gray-100 min-h-screen py-10">
       <div className="max-w-7xl mx-auto px-4">
@@ -220,15 +228,29 @@ console.log(data)
         <div className="flex justify-between items-center mb-6 relative">
           <div className="text-center w-full">
             <h1 className="text-4xl font-bold mb-2">Blog</h1>
-            <div className="space-x-4">
-              <button onClick={goToHome} className="hover:underline font-medium ">
-                Home
+            <div className="flex justify-center gap-8">
+              <button
+                onClick={goToHome}
+                className="flex items-center gap-2 text-gray-700 hover:text-blue-600 transition"
+              >
+                <Home className="w-5 h-5" />
+                <span className="font-medium text-base">Home</span>
               </button>
-              <button onClick={goToProfile} className="hover:underline font-medium text-blue-600">
-                Profile
+
+              <button
+                onClick={goToProfile}
+                className="flex items-center gap-2 text-blue-700 hover:text-gray-600 transition"
+              >
+                <User className="w-5 h-5" />
+                <span className="font-medium text-base">Profile</span>
               </button>
-              <button onClick={() => router.push("/explore")} className="hover:underline font-medium text-blue-600">
-                Explore
+
+              <button
+                onClick={gotoExplore}
+                className="flex items-center gap-2 text-blue-700 hover:text-gray-600 transition"
+              >
+                <Compass className="w-5 h-5" />
+                <span className="font-medium text-base">Explore</span>
               </button>
             </div>
           </div>
@@ -307,19 +329,19 @@ console.log(data)
                         👤 <strong>{post.author.username}</strong>
                       </span>
                       <span>
-                        📅{" "} {}
+                        📅{" "} { }
                         {new Date(post.createdAt).toLocaleDateString("az-AZ", {
                           day: "2-digit",
                           month: "long",
                           year: "numeric",
                         })}
                       </span>
-                       <LikeButton 
-                    postId={post.id}
-                    likes={post.likes}
-                    currentUserId={user?.id}
-                  />
-                      {/* <span>💬 {post.comments}</span> */}
+                      <LikeButton
+                        postId={post.id}
+                        likes={post.likes}
+                        currentUserId={user?.id}
+                      />
+                      <span onClick={() => setActiveCommentPostId(post.id)}>💬 {post.comments.length}</span>
                     </div>
                     <p className="text-gray-700 mb-4">
                       {post.content.length > 100
@@ -389,6 +411,46 @@ console.log(data)
           </div>
         </div>
       </div>
+      {activeCommentPostId && (
+        <div className="fixed inset-0 z-50 flex justify-center items-center  bg-opacity-50 backdrop-blur-sm">
+          <div className="bg-white w-full max-w-5xl h-[80vh] rounded-2xl flex overflow-hidden relative">
+            <button
+              onClick={handleModalClose}
+              className="absolute top-3 right-4 text-xl text-gray-600 hover:text-black"
+            >
+              ✖
+            </button>
+
+            <div className="w-1/2 ">
+              <img
+                src={`/blog/${posts.find(p => p.id === activeCommentPostId)?.image}`}
+                alt="Post"
+                className="w-full h-full object-cover"
+              />
+            </div>
+
+            <div className="flex flex-col w-1/2 p-6">
+
+
+              <div className=" overflow-hidden">
+                <div className="mb-4 text-lg font-semibold">
+                  👤 {posts.find(p => p.id === activeCommentPostId)?.author.username}
+                </div>
+              </div>
+
+
+
+              <div className=" overflow-hidden">
+
+
+
+                <CommentSection postId={activeCommentPostId} />
+              </div>
+            </div>
+
+          </div>
+        </div>
+      )}
     </div>
   );
 }

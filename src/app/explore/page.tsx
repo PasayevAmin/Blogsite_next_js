@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import * as Popover from "@radix-ui/react-popover";
 import { useEffect, useState, useCallback } from "react";
+import { Home, User, Compass, Heart } from "lucide-react";
 
 type Post = {
   id: number;
@@ -185,10 +186,30 @@ export default function BlogPage() {
         <div className="flex justify-between items-center mb-6 relative">
           <div className="text-center w-full">
             <h1 className="text-4xl font-bold mb-2">Blog</h1>
-            <div className="space-x-4">
-              <a onClick={goToHome} className="text-blue-600 hover:underline font-medium cursor-pointer">Home</a>
-              <a onClick={goToProfile} className="text-blue-600 hover:underline font-medium cursor-pointer">Profile</a>
-              <a className="hover:underline font-medium cursor-pointer">Explore</a>
+             <div className="flex justify-center gap-8">
+              <button
+                onClick={() => router.push(`/`)}
+                className="flex items-center gap-2 text-blue-700 hover:text-blue-600 transition"
+              >
+                <Home className="w-5 h-5" />
+                <span className="font-medium text-base">Home</span>
+              </button>
+
+              <button
+                onClick={() => router.push(`/profile`)}
+                className="flex items-center gap-2 text-blue-700 hover:text-gray-600 transition"
+              >
+                <User className="w-5 h-5" />
+                <span className="font-medium text-base">Profile</span>
+              </button>
+
+              <button
+                onClick={() => router.push(`/explore`)}
+                className="flex items-center gap-2 text-gray-700 hover:text-gray-600 transition"
+              >
+                <Compass className="w-5 h-5" />
+                <span className="font-medium text-base">Explore</span>
+              </button>
             </div>
           </div>
 

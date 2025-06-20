@@ -1,9 +1,9 @@
 "use client";
-
 import { useParams } from "next/navigation";
 import { useRouter } from "next/navigation";
-
 import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
+const CommentSection = dynamic(() => import("@/app/comment/page"), { ssr: false });
 
 type Post = {
   id: number;
@@ -20,7 +20,7 @@ type Post = {
   };
   createdAt: string;
   likes: { userId: number }[];  // Likes - array userId-lərlə
-  comments: number;
+  comments: { id: number; userId: number; postId: number; createdAt: string }[];
   content: string;
   image?: string;
 };
@@ -100,15 +100,15 @@ export default function Details() {
 
   const [user, setUser] = useState<User>({});
   const [posts, setPosts] = useState<Post[]>([]);
+  const [activeCommentPostId, setActiveCommentPostId] = useState<number | null>(null);
+  const [reloadCommentCount, setReloadCommentCount] = useState(0);
 
   async function fetchUserPostfortag(tagId: number) {
     try {
       const res = await fetch(`/api/tag/${tagId}`);
       if (!res.ok) throw new Error("Xəta baş verdi");
-
       const data = await res.json();
       setPosts(data.posts);
-      console.log(data.posts)
     } catch (error) {
       console.error(error);
     }
@@ -123,14 +123,13 @@ export default function Details() {
 
     if (typeof window !== "undefined") {
       const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
-
       if (!storedUser?.id) {
         window.location.href = "/login";
       } else {
         setUser(storedUser);
       }
     }
-  }, [tagId]);
+  }, [tagId, reloadCommentCount]);
 
   if (!posts) {
     return (
@@ -140,115 +139,156 @@ export default function Details() {
     );
   }
 
-  // Function to navigate to home page
   function goToHome() {
     router.push("/");
   }
 
+  const handleModalClose = () => {
+    setActiveCommentPostId(null);
+    setReloadCommentCount((prev) => prev + 1);
+  };
+
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-2 text-center text-gray-800">
-        Etiketə görə yazılar
-      </h1>
+    <div className="relative">
+      <div className={`container mx-auto px-4 py-8 ${activeCommentPostId ? "blur-sm" : ""}`}>
+        <h1 className="text-3xl font-bold mb-2 text-center text-gray-800">
+          Etiketə görə yazılar
+        </h1>
 
-      {/* Home düyməsi - başlıq altı, ortalanmış, mavi rəngli */}
-      <div className="text-center mb-6">
-        <button
-          onClick={goToHome}
-          className="text-blue-600 hover:underline font-semibold text-lg px-4 py-2 cursor-pointer"
-        >
-          Ana səhifəyə qayıt
-        </button>
-      </div>
-
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {posts.length === 0 && (
-          <div className="col-span-full text-center text-gray-500 text-lg">
-            Heç bir yazı tapılmadı.
-          </div>
-        )}
-
-        {posts.map((post) => (
-          <div
-            key={post.id}
-            className="bg-white shadow-lg rounded-2xl overflow-hidden transition-transform transform hover:scale-[1.02] hover:shadow-2xl cursor-pointer"
+        <div className="text-center mb-6">
+          <button
+            onClick={goToHome}
+            className="text-blue-600 hover:underline font-semibold text-lg px-4 py-2 cursor-pointer"
           >
-            {post.image && (
-              <img
-                onClick={() => router.push(`/post/${post.id}`)}
-                src={`/blog/${post.image}`}
-                alt={post.title}
-                className="w-full h-60 object-cover"
-              />
-            )}
-            <div className="p-5 flex flex-col gap-3">
-              <div className="flex items-center justify-between text-sm text-gray-400">
-                {post?.tags && post?.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mt-4">
-                    {post.tags.map((tag, index) => (
-                      <span
-                        key={index}
-                        className="text-white text-xs font-medium px-2 py-1 rounded bg-blue-500 cursor-pointer hover:opacity-80 transition"
-                      >
-                        {tag.label}
-                      </span>
-                    ))}
-                  </div>
-                )}
-                <span>
-                  {new Date(post.createdAt).toLocaleDateString("az-AZ", {
-                    year: "numeric",
-                    month: "short",
-                    day: "numeric",
-                  })}
-                </span>
-              </div>
+            Ana səhifəyə qayıt
+          </button>
+        </div>
 
-              <h2
-                onClick={() => router.push(`/post/${post.id}`)}
-                className="text-xl font-semibold text-gray-800"
-              >
-                {post.title}
-              </h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {posts.length === 0 && (
+            <div className="col-span-full text-center text-gray-500 text-lg">
+              Heç bir yazı tapılmadı.
+            </div>
+          )}
 
-              <p
-                onClick={() => router.push(`/post/${post.id}`)}
-                className="text-gray-600 text-sm"
-              >
-                {post.content.length > 100
-                  ? post.content.slice(0, 100) + "..."
-                  : post.content}
-              </p>
+          {posts.map((post) => (
+            <div
+              key={post.id}
+              className="bg-white shadow-lg rounded-2xl overflow-hidden transition-transform transform hover:scale-[1.02] hover:shadow-2xl"
+            >
+              {post.image && (
+                <img
+                  onClick={() => router.push(`/post/${post.id}`)}
+                  src={`/blog/${post.image}`}
+                  alt={post.title}
+                  className="w-full h-60 object-cover cursor-pointer"
+                />
+              )}
+              <div className="p-5 flex flex-col gap-3">
+                <div className="flex items-center justify-between text-sm text-gray-400">
+                  {post?.tags && post?.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mt-4">
+                      {post.tags.map((tag, index) => (
+                        <span
+                          onClick={() => router.push(`/tag/${tag.id}`)}
+                          key={index}
+                          className="text-white text-xs font-medium px-2 py-1 rounded bg-blue-500 cursor-pointer hover:opacity-80 transition"
+                        >
+                          {tag.label}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  <span>
+                    {new Date(post.createdAt).toLocaleDateString("az-AZ", {
+                      year: "numeric",
+                      month: "short",
+                      day: "numeric",
+                    })}
+                  </span>
+                </div>
 
-              <div className="flex justify-between items-center text-sm text-gray-500 mt-2">
-                <span
-                  onClick={() => {
-                    const currentUserId = user?.id; // daxil olmuş istifadəçi id-si
-                    const authorId = post.author.id;
-
-                    if (currentUserId === authorId) {
-                      router.push("/profile");
-                    } else {
-                      router.push(`/profile/${authorId}`);
-                    }
-                  }}
+                <h2
+                  onClick={() => router.push(`/post/${post.id}`)}
+                  className="text-xl font-semibold text-gray-800 cursor-pointer"
                 >
-                  👤 <strong>{post.author.username}</strong>
-                </span>
-                <div className="cursor-pointer flex gap-3 items-center">
-                  <LikeButton
-                    postId={post.id}
-                    likes={post.likes}
-                    currentUserId={user?.id}
-                  />
-                  <span>💬 {post.comments}</span>
+                  {post.title}
+                </h2>
+
+                <p
+                  onClick={() => router.push(`/post/${post.id}`)}
+                  className="text-gray-600 text-sm cursor-pointer"
+                >
+                  {post.content.length > 100
+                    ? post.content.slice(0, 100) + "..."
+                    : post.content}
+                </p>
+
+                <div className="flex justify-between items-center text-sm text-gray-500 mt-2">
+                  <span
+                    onClick={() => {
+                      const currentUserId = user?.id;
+                      const authorId = post.author.id;
+
+                      if (currentUserId === authorId) {
+                        router.push("/profile");
+                      } else {
+                        router.push(`/profile/${authorId}`);
+                      }
+                    }}
+                  >
+                    👤 <strong>{post.author.username}</strong>
+                  </span>
+                  <div className="flex gap-3 items-center">
+                    <LikeButton
+                      postId={post.id}
+                      likes={post.likes}
+                      currentUserId={user?.id}
+                    />
+                    <button
+                      onClick={() => setActiveCommentPostId(post.id)}
+                      className="hover:text-blue-600 transition cursor-pointer"
+                    >
+                      💬 {post.comments.length}
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
+
+      {activeCommentPostId && (
+        <div className="fixed inset-0 z-50 flex justify-center items-center  bg-opacity-50 backdrop-blur-sm">
+          <div className="bg-white w-full max-w-5xl h-[80vh] rounded-2xl flex overflow-hidden relative">
+            <button
+              onClick={handleModalClose}
+              className="absolute top-3 right-4 text-xl text-gray-600 hover:text-black"
+            >
+              ✖
+            </button>
+
+            <div className="w-1/2 ">
+              <img
+                src={`/blog/${posts.find(p => p.id === activeCommentPostId)?.image}`}
+                alt="Post"
+                className="w-full h-full object-cover"
+              />
+            </div>
+
+            <div className="w-1/2 p-6 overflow-y-auto">
+              <div className="mb-4 text-lg font-semibold">
+                👤 {posts.find(p => p.id === activeCommentPostId)?.author.username}
+              </div>
+              <CommentSection postId={activeCommentPostId}  />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
+
+

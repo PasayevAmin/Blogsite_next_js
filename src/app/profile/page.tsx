@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import * as Popover from "@radix-ui/react-popover";
+import { Home, User, Compass, Heart } from "lucide-react";
 
 
 
@@ -16,7 +17,7 @@ type Post = {
   };
   createdAt: string;
   likes: number;
-  comments: number;
+  comments: { id: number; userId: number; postId: number; createdAt: string }[];
   tags: { id: number; label: string; color?: string }[];
   content: string;
   image?: string;
@@ -197,6 +198,7 @@ export default function Profile() {
       setFile(null);
       setSelectedTags([]);
       setShowCreateModal(false);
+
     } catch (error) {
       console.error("Post yaradılmadı:", error);
       alert("Xəta baş verdi");
@@ -223,23 +225,31 @@ export default function Profile() {
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-4xl font-bold">Blog</h1>
-          <div className="space-x-4">
-            <button
-              onClick={() => router.push("/")}
-              className="text-blue-600 hover:underline font-medium"
-            >
-              Home
-            </button>
-            <button
-              onClick={() => router.push("/profile")}
-              className="hover:underline font-medium"
-            >
-              Profile
-            </button>
-            <button onClick={() => router.push(`/explore`)} className="text-blue-600 hover:underline font-medium cursor-pointer">
-              Explore
-            </button>
-          </div>
+          <div className="flex justify-center gap-8">
+              <button
+                onClick={() => router.push(`/`)}
+                className="flex items-center gap-2 text-blue-700 hover:text-blue-600 transition"
+              >
+                <Home className="w-5 h-5" />
+                <span className="font-medium text-base">Home</span>
+              </button>
+
+              <button
+                onClick={() => router.push(`/Profile`)}
+                className="flex items-center gap-2 text-gray-700 hover:text-gray-600 transition"
+              >
+                <User className="w-5 h-5" />
+                <span className="font-medium text-base">Profile</span>
+              </button>
+
+              <button
+                onClick={() => router.push(`/explore`)}
+                className="flex items-center gap-2 text-blue-700 hover:text-gray-600 transition"
+              >
+                <Compass className="w-5 h-5" />
+                <span className="font-medium text-base">Explore</span>
+              </button>
+            </div>
           <div className="hidden sm:flex justify-end items-center space-x-4 mb-8 p-4">
             <span className="text-gray-700 font-semibold">
               Welcome, <strong>{user?.username}</strong>
@@ -351,7 +361,7 @@ export default function Profile() {
                       likes={Array.isArray(post.likes) ? post.likes : []}
                     />
                    
-                    <span>💬 {post?.comments}</span>
+                    <span>💬 {post?.comments.length}</span>
                   </div>
                 </div>
                 {post?.tags && post?.tags.length > 0 && (

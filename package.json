@@ -24,6 +24,7 @@
     "bootstrap": "^5.3.6",
     "formidable": "^3.5.4",
     "jsonwebtoken": "^9.0.2",
+    "lucide-react": "^0.518.0",
     "multer": "^2.0.1",
     "next": "15.3.3",
     "react": "^19.0.0",
