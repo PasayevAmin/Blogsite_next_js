@@ -6,7 +6,7 @@ import * as Popover from "@radix-ui/react-popover";
 import { Home, User, Compass, Heart } from "lucide-react";
 import dynamic from "next/dynamic";
 import { Toaster } from "react-hot-toast";
-import { notifySuccess } from "@/lib/toast/toasthelper";
+import { notifySuccess } from "@/app/lib/toast/toasthelper";
 const CommentSection = dynamic(() => import("@/app/comment/page"), { ssr: false });
 type Tag = {
   id: number;
@@ -119,43 +119,43 @@ export default function BlogPage() {
   const [activeCommentPostId, setActiveCommentPostId] = useState<number | null>(null);
   const [reloadCommentCount, setReloadCommentCount] = useState(0);
 
-const fetchFollowedPosts = async (userId: number, pageNumber = 1, ) => {
-  if ((loading || !hasMore)) return;
+  const fetchFollowedPosts = async (userId: number, pageNumber = 1,) => {
+    if ((loading || !hasMore)) return;
 
-  setLoading(true);
+    setLoading(true);
 
-  try {
-    const res = await fetch("/api/following_post", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId, page: pageNumber }),
-    });
+    try {
+      const res = await fetch("/api/following_post", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, page: pageNumber }),
+      });
 
-    if (!res.ok) throw new Error("Xəta baş verdi");
+      if (!res.ok) throw new Error("Xəta baş verdi");
 
-    const data = await res.json();
+      const data = await res.json();
 
-    if (data.posts.length < 10) {
-      setHasMore(false);
+      if (data.posts.length < 10) {
+        setHasMore(false);
+      }
+
+      setPosts((prev) => {
+        const newPosts = data.posts.filter(
+          (p: Post) => !prev.some((existing) => existing.id === p.id)
+        );
+        return [...prev, ...newPosts];
+      });
+
+      setPage((prev) => prev + 1);
+    } catch (error) {
+      console.error("Postlar gətirilə bilmədi:", error);
+    } finally {
+      setLoading(false);
     }
+  };
 
-    setPosts((prev) => {
-      const newPosts = data.posts.filter(
-        (p: Post) => !prev.some((existing) => existing.id === p.id)
-      );
-      return [...prev, ...newPosts];
-    });
-
-    setPage((prev) => prev + 1);
-  } catch (error) {
-    console.error("Postlar gətirilə bilmədi:", error);
-  } finally {
-    setLoading(false);
-  }
-};
-
-const fetchCommentsf=()=>{
-  if (typeof window !== "undefined") {
+  const fetchCommentsf = () => {
+    if (typeof window !== "undefined") {
 
       const storedUserJson = localStorage.getItem("user");
       if (!storedUserJson) {
@@ -172,12 +172,12 @@ const fetchCommentsf=()=>{
       setUser(storedUser);
       fetchFollowedPosts(storedUser.id, 1);
     }
-}
+  }
   useEffect(() => {
-    
+
     fetchCommentsf()
-  }, [router,reloadCommentCount]);
-const handleModalClose = () => {
+  }, [router, reloadCommentCount]);
+  const handleModalClose = () => {
     setActiveCommentPostId(null);
     setReloadCommentCount((prev) => prev + 1);
   };
@@ -231,7 +231,7 @@ const handleModalClose = () => {
     });
     return Array.from(tagMap.values());
   }, [posts]);
-  
+
   return (
     <div className="bg-gray-100 min-h-screen py-10">
       <div className="max-w-7xl mx-auto px-4">
@@ -336,9 +336,19 @@ const handleModalClose = () => {
                       {post.title}
                     </h2>
                     <div className="flex justify-center items-center text-gray-500 text-sm gap-4 mb-6">
-                      <span onClick={() => router.push(`/profile/${post.author.id}`)}>
+                      <span
+                        onClick={() =>
+                          router.push(
+                            user?.id === post.author.id
+                              ? "/profile"
+                              : `/profile/${post.author.id}`
+                          )
+                        }
+                        className="cursor-pointer hover:text-blue-600"
+                      >
                         👤 <strong>{post.author.username}</strong>
                       </span>
+                      
                       <span>
                         📅{" "} { }
                         {new Date(post.createdAt).toLocaleDateString("az-AZ", {
@@ -347,11 +357,11 @@ const handleModalClose = () => {
                           year: "numeric",
                         })}
                       </span>
-                        <LikeButton
-                          postId={post.id}
-                          likes={post.likes}
-                          currentUserId={user?.id}
-                        />
+                      <LikeButton
+                        postId={post.id}
+                        likes={post.likes}
+                        currentUserId={user?.id}
+                      />
                       <span onClick={() => setActiveCommentPostId(post.id)}>💬 {post.comments.length}</span>
                     </div>
                     <p className="text-gray-700 mb-4">
@@ -455,7 +465,7 @@ const handleModalClose = () => {
 
 
 
-                <CommentSection postId={activeCommentPostId} fetchFollowedPosts={()=>fetchCommentsf()}/>
+                <CommentSection postId={activeCommentPostId} fetchFollowedPosts={() => fetchCommentsf()} />
               </div>
             </div>
 
@@ -463,7 +473,7 @@ const handleModalClose = () => {
         </div>
       )}
       <Toaster />
-      
+
     </div>
   );
 }

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import  { Toaster } from 'react-hot-toast';
-import { notifySuccess, notifyError } from '@/lib/toast/toasthelper'
+import { notifySuccess ,notifyError} from "@/app/lib/toast/toasthelper";
 import { setTimeout } from "node:timers";
 export default function LoginPage() {
   const router = useRouter();

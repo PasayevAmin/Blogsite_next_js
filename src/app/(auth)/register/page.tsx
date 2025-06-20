@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Toaster } from "react-hot-toast";
-import { notifySuccess } from "@/lib/toast/toasthelper";
+import { notifySuccess } from "@/app/lib/toast/toasthelper";
 import axios from "axios";
 import FileUploaderMultiple, { FileWithPreview } from "./uploader";
 

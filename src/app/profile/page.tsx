@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import * as Popover from "@radix-ui/react-popover";
 import { Home, User, Compass, Heart } from "lucide-react";
 import CommentSection from "../comment/page";
-import { notifyError, notifySuccess } from "@/lib/toast/toasthelper";
+import { notifyError, notifySuccess } from "@/app/lib/toast/toasthelper";
 import { Toaster } from "react-hot-toast";
 
 
