@@ -65,7 +65,7 @@ export default function CommentSection({ postId ,fetchFollowedPosts}: { postId: 
       <div className="flex-1 overflow-y-auto pb-28">
         <h3 className="text-lg font-semibold mb-3 text-gray-800">Şərhlər</h3>
 
-        {comments.length === 0 ? (
+        { comments === null ? (
           <p className="text-gray-500">Şərh yoxdur.</p>
         ) : (
           <ul className="space-y-4">

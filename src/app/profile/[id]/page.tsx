@@ -286,7 +286,7 @@ const handleModalClose = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {posts.length === 0 && <p className="col-span-full text-gray-500 text-center">No posts found.</p>}
+          {posts?.length === 0 && <p className="col-span-full text-gray-500 text-center">No posts found.</p>}
 
           {posts.map((post) => (
             <div
@@ -332,7 +332,7 @@ const handleModalClose = () => {
                       currentUserId={user?.id}
                     />
 
-                    <span onClick={() => setActiveCommentPostId(post.id)}>💬 {post.comments.length}</span>
+                    <span className="text-black" onClick={() => setActiveCommentPostId(post.id)}>💬 {post.comments.length}</span>
                   </div>
                 </div>
 

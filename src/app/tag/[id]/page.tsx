@@ -244,6 +244,7 @@ if (!tagId) return;
 
                 <div className="flex justify-between items-center text-sm text-gray-500 mt-2">
                   <span
+                  className="cursor-pointer"
                     onClick={() => {
                       const currentUserId = user?.id;
                       const authorId = post.author.id;
@@ -257,7 +258,7 @@ if (!tagId) return;
                   >
                     👤 <strong>{post.author.username}</strong>
                   </span>
-                  <div className="flex gap-3 items-center">
+                  <div className="flex gap-3 items-center ">
                     <LikeButton
                       postId={post.id}
                       likes={post.likes}

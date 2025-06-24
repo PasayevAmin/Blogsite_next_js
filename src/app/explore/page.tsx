@@ -305,7 +305,7 @@ export default function BlogPage() {
 
         <br></br>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {posts?.length === 0 && (
+          {posts === null && (
             <p className="col-span-full text-gray-500 text-center">
               Heç bir yazı tapılmadı.
             </p>
@@ -357,7 +357,7 @@ export default function BlogPage() {
                 </p>
 
                 {/* Footer */}
-                <div className="flex justify-between items-center text-sm text-gray-500 mt-2">
+                <div className="flex justify-between items-center text-sm text-gray-500 mt-2  ">
                   <span
                     onClick={() =>
                       router.push(
@@ -371,7 +371,7 @@ export default function BlogPage() {
                     👤 <strong>{post.author.username}</strong>
                   </span>
 
-                  <div className="flex gap-3 items-center cursor-pointer">
+                  <div className="flex gap-3 items-center ">
                     <LikeButton
                       postId={post.id}
                       likes={post.likes}
@@ -379,7 +379,7 @@ export default function BlogPage() {
                     />
                     <button
                       onClick={() => setActiveCommentPostId(post.id)}
-                      className="hover:text-blue-600 transition cursor-pointer"
+                      className="hover:text-blue-600 transition cursor-pointer text-black"
                     >
                       💬 {post?.comments?.length}
                     </button>

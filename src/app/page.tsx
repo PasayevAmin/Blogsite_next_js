@@ -110,127 +110,129 @@ function LikeButton({
 
 
 export default function BlogPage() {
-  const router = useRouter();
-  const [user, setUser] = useState<User>({});
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
-  const [loading, setLoading] = useState(false);
-  const [activeCommentPostId, setActiveCommentPostId] = useState<number | null>(null);
-  const [reloadCommentCount, setReloadCommentCount] = useState(0);
+const router = useRouter();
+const [user, setUser] = useState<User>({});
+const [posts, setPosts] = useState<Post[]>([]);
+const [page, setPage] = useState(1);
+const [hasMore, setHasMore] = useState(true);
+const [loading, setLoading] = useState(false);
+const [activeCommentPostId, setActiveCommentPostId] = useState<number | null>(null);
+const [reloadCommentCount, setReloadCommentCount] = useState(0);
 
-  const fetchFollowedPosts = async (userId: number, pageNumber = 1,) => {
-    if ((loading || !hasMore)) return;
+const fetchFollowedPosts = async (userId: number, pageNumber = 1) => {
 
-    setLoading(true);
+  setLoading(true);
 
-    try {
-      const res = await fetch("/api/following_post", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, page: pageNumber }),
-      });
-
-      if (!res.ok) throw new Error("Xəta baş verdi");
-
-      const data = await res.json();
-
-      if (data.posts.length < 10) {
-        setHasMore(false);
-      }
-
-      setPosts((prev) => {
-        const newPosts = data.posts.filter(
-          (p: Post) => !prev.some((existing) => existing.id === p.id)
-        );
-        return [...prev, ...newPosts];
-      });
-
-      setPage((prev) => prev + 1);
-    } catch (error) {
-      console.error("Postlar gətirilə bilmədi:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchCommentsf = () => {
-    if (typeof window !== "undefined") {
-
-      const storedUserJson = localStorage.getItem("user");
-      if (!storedUserJson) {
-        router.push("/login");
-        return;
-      }
-
-      const storedUser: User = JSON.parse(storedUserJson);
-      if (!storedUser?.id) {
-        router.push("/login");
-        return;
-      }
-
-      setUser(storedUser);
-      fetchFollowedPosts(storedUser.id, 1);
-    }
-  }
-  useEffect(() => {
-
-    fetchCommentsf()
-  }, [router, reloadCommentCount]);
-  const handleModalClose = () => {
-    setActiveCommentPostId(null);
-    setReloadCommentCount((prev) => prev + 1);
-  };
-
-
-  // scroll-a qulaq as
-  useEffect(() => {
-    const handleScroll = () => {
-      if (
-        window.innerHeight + window.scrollY >= document.body.offsetHeight - 100 &&
-        !loading &&
-        hasMore
-      ) {
-        if (user.id) {
-          fetchFollowedPosts(user.id, page);
-        }
-      }
-    };
-
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, [loading, hasMore, page, user.id]);
-
-  const goToHome = () => router.push("/");
-  const goToProfile = () => router.push("/profile");
-  const gotoExplore = () => router.push("/explore")
-
-  const handleLogout = async () => {
-    try {
-      const res = await fetch("/api/auth/logout", { method: "POST" });
-      if (res.ok) {
-        localStorage.removeItem("user");
-        router.push("/login");
-        notifySuccess("Çıxış Olundu!🎉")
-      } else {
-        alert("Çıxış zamanı xəta baş verdi.");
-      }
-    } catch (error) {
-      console.error("Çıxış zamanı xəta:", error);
-    }
-  };
-
-  const uniqueTags = useMemo(() => {
-    const tagMap = new Map<number, Tag>();
-    posts.forEach((post) => {
-      post.tags?.forEach((tag) => {
-        if (!tagMap.has(tag.id)) {
-          tagMap.set(tag.id, tag);
-        }
-      });
+  try {
+    const res = await fetch("/api/following_post", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId, page: pageNumber }),
     });
-    return Array.from(tagMap.values());
-  }, [posts]);
+
+    if (!res.ok) throw new Error("Xəta baş verdi");
+
+    const data = await res.json();
+
+    if (data.posts.length < 10) {
+      setHasMore(false);
+    }
+
+    setPosts((prev) => {
+      const newPosts = data.posts.filter(
+        (p: Post) => !prev.some((existing) => existing.id === p.id)
+      );
+      return [...prev, ...newPosts];
+    });
+
+    setPage((prev) => prev + 1);
+  } catch (error) {
+    console.error("Postlar gətirilə bilmədi:", error);
+  } finally {
+    setLoading(false);
+  }
+};
+
+const fetchCommentsf = () => {
+  if (typeof window !== "undefined") {
+    const storedUserJson = localStorage.getItem("user");
+    if (!storedUserJson) {
+      router.push("/login");
+      return;
+    }
+
+    const storedUser: User = JSON.parse(storedUserJson);
+    if (!storedUser?.id) {
+      router.push("/login");
+      return;
+    }
+
+    setUser(storedUser);
+    fetchFollowedPosts(storedUser.id, 1);
+  }
+};
+
+useEffect(() => {
+  fetchCommentsf();
+}, [router, reloadCommentCount]);
+
+
+const handleModalClose = () => {
+  setActiveCommentPostId(null);
+};
+
+
+
+
+
+useEffect(() => {
+  const handleScroll = () => {
+    if (
+      window.innerHeight + window.scrollY >= document.body.offsetHeight - 100 &&
+      !loading &&
+      hasMore
+    ) {
+      if (user.id) {
+        fetchFollowedPosts(user.id, page);
+      }
+    }
+  };
+
+  window.addEventListener("scroll", handleScroll);
+  return () => window.removeEventListener("scroll", handleScroll);
+}, [loading, hasMore, page, user.id]);
+
+const goToHome = () => router.push("/");
+const goToProfile = () => router.push("/profile");
+const gotoExplore = () => router.push("/explore");
+
+const handleLogout = async () => {
+  try {
+    const res = await fetch("/api/auth/logout", { method: "POST" });
+    if (res.ok) {
+      localStorage.removeItem("user");
+      router.push("/login");
+      notifySuccess("Çıxış Olundu!🎉");
+    } else {
+      alert("Çıxış zamanı xəta baş verdi.");
+    }
+  } catch (error) {
+    console.error("Çıxış zamanı xəta:", error);
+  }
+};
+
+const uniqueTags = useMemo(() => {
+  const tagMap = new Map<number, Tag>();
+  posts.forEach((post) => {
+    post.tags?.forEach((tag) => {
+      if (!tagMap.has(tag.id)) {
+        tagMap.set(tag.id, tag);
+      }
+    });
+  });
+  return Array.from(tagMap.values());
+}, [posts]);
+
 
   return (
     <div className="bg-gray-100 min-h-screen py-10">
@@ -362,7 +364,7 @@ export default function BlogPage() {
                         likes={post.likes}
                         currentUserId={user?.id}
                       />
-                      <span onClick={() => setActiveCommentPostId(post.id)}>💬 {post.comments.length}</span>
+                      <span className="text-black" onClick={() => setActiveCommentPostId(post.id)}>💬 {post.comments.length}</span>
                     </div>
                     <p className="text-gray-700 mb-4">
                       {post.content.length > 100

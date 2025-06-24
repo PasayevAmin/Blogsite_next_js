@@ -109,6 +109,16 @@ export default function Details() {
   const [showModal, setShowModal] = useState(false);
 const [activeCommentPostId, setActiveCommentPostId] = useState<number | null>(null);
   const [reloadCommentCount, setReloadCommentCount] = useState(0);
+  // Get current user from localStorage
+  const [user, setUser] = useState<{ id: string } | null>(null);
+
+  useEffect(() => {
+    const storedUser = JSON.parse(localStorage.getItem("user") || "null");
+    if (storedUser && storedUser.id) {
+      setUser(storedUser);
+    }
+  }, []);
+
   async function fetchUserPost(id: number) {
     try {
       const res = await fetch(`/api/post/${id}`);
@@ -184,13 +194,19 @@ const [activeCommentPostId, setActiveCommentPostId] = useState<number | null>(nu
             {post.title}
           </h1>
           <div className="flex justify-center items-center text-gray-500 text-sm gap-4 mb-6 ">
-            <span className="cursor-pointer" onClick={() => router.push(`/profile/${post.author.id}`)}>👤 <strong>{post.author.username}</strong></span>
+            <span className="cursor-pointer" onClick={() =>
+                          router.push(
+                            user?.id === post.author.id
+                              ? "/profile"
+                              : `/profile/${post.author.id}`
+                          )
+                        }>👤 <strong>{post.author.username}</strong></span>
             <span>📅 {new Date(post.createdAt).toLocaleDateString("az-AZ", { day: "2-digit", month: "long", year: "numeric" })}</span>
              <LikeButton 
                     postId={post.id}
                     likes={post.likes}
                   />
-            <span className="cursor-pointer"  onClick={() => setActiveCommentPostId(post.id)}>💬 {post.comments.length}</span>
+            <span className="cursor-pointer text-black"  onClick={() => setActiveCommentPostId(post.id)}>💬 {post.comments.length}</span>
           </div>
           <p className="text-gray-700 leading-relaxed text-lg mb-6">
             {post.content}

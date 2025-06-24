@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import * as Popover from "@radix-ui/react-popover";
-import { Home, User, Compass, Heart } from "lucide-react";
+import { Home, User, Compass, Heart, X } from "lucide-react";
 import CommentSection from "../comment/page";
 import { notifyError, notifySuccess } from "@/app/lib/toast/toasthelper";
 import { Toaster } from "react-hot-toast";
@@ -138,7 +138,29 @@ export default function Profile() {
       console.error(error);
     }
   }
+  const handleDeletePost = async (postId: number) => {
+    if (!confirm("Bu postu silmək istədiyinizə əminsiniz?")) {
+      return;
+    }
 
+    try {
+      const res = await fetch(`/api/post/${postId}`, {
+        method: "DELETE",
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        setPosts((prevPosts) => prevPosts.filter((post) => post.id !== postId));
+        notifySuccess(data.message || "Post uğurla silindi!🗑️");
+      } else {
+        notifyError(data.error || "Post silinərkən xəta baş verdi.");
+      }
+    } catch (error) {
+      console.error("Post silinərkən xəta:", error);
+      notifyError("Post silinərkən server xətası baş verdi.");
+    }
+  };
   async function fetchTags() {
     try {
       const res = await fetch("/api/tag");
@@ -316,106 +338,123 @@ export default function Profile() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {posts?.length === 0 && (
             <p className="col-span-full text-gray-500 text-center">
-              Heç bir yazı tapılmadı.
+              No Posts Yet
             </p>
           )}
 
           {posts.map((post) => (
-            <div
-              key={post.id}
-              className="bg-white shadow-lg rounded-2xl overflow-hidden transition-transform transform hover:scale-[1.02] hover:shadow-2xl cursor-pointer"
+  <div
+    key={post.id}
+    className="bg-white shadow-lg rounded-2xl overflow-hidden transition-transform transform hover:scale-[1.02] hover:shadow-2xl"
+    // cursor-pointer burada artıq idi, çünki kartın özünün birbaşa klik hadisəsi yoxdur.
+    // İçərisindəki elementlər (şəkil, başlıq, məzmun) kliklənə bilər.
+  >
+    {post.image && (
+      <div className="relative"> {/* Şəkil üçün relative konteyner */}
+        <img
+          src={`/blog/${post.image}`}
+          alt={post.title}
+          className="w-full h-60 object-cover cursor-pointer"
+          onClick={() => router.push(`/post/${post.id}`)}
+        />
+        {/* Silmə düyməsi */}
+        {user?.id === post.author.id && ( // Yalnız postun müəllifi görsün
+          <button
+            onClick={(e) => {
+              e.stopPropagation(); // Şəkilin click hadisəsinin işə düşməsini dayandırır
+              handleDeletePost(post.id);
+            }}
+            className="absolute top-3 right-3 bg-red-600 hover:bg-red-700 text-white p-2 rounded-full shadow-lg z-10 transition-transform transform hover:scale-110"
+            aria-label="Postu sil" // Ekran oxuyucular üçün əlçatanlıq
+          >
+            <X className="w-5 h-5" /> {/* 'X' ikonu */}
+          </button>
+        )}
+      </div>
+    )}
+
+    <div className="p-5 flex flex-col gap-3">
+      {/* Top Bar */}
+      <div className="flex items-center justify-between text-sm text-gray-400">
+        {post.category && (
+          <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-xs">
+            {post.category}
+          </span>
+        )}
+        <span>
+          {new Date(post.createdAt).toLocaleDateString("az-AZ", {
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+          })}
+        </span>
+      </div>
+
+      {/* Title */}
+      <h2
+        className="text-xl font-semibold text-gray-800 hover:underline cursor-pointer"
+        onClick={() => router.push(`/post/${post.id}`)}
+      >
+        {post.title}
+      </h2>
+
+      {/* Content */}
+      <p
+        className="text-gray-600 text-sm cursor-pointer"
+        onClick={() => router.push(`/post/${post.id}`)}
+      >
+        {post?.content?.length > 100
+          ? post.content.slice(0, 100) + "..."
+          : post.content}
+      </p>
+
+      {/* Footer */}
+      <div className="flex justify-between items-center text-sm text-gray-500 mt-2">
+        <span
+          onClick={() =>
+            router.push(
+              user?.id === post.author.id
+                ? "/profile"
+                : `/profile/${post.author.id}`
+            )
+          }
+          className="hover:text-blue-600 cursor-pointer"
+        >
+          👤 <strong>{post.author.username}</strong>
+        </span>
+
+        <div className="flex gap-3 items-center">
+          <LikeButton
+            postId={post.id}
+            likes={post.likes}
+            currentUserId={user?.id}
+          />
+          <button
+            onClick={() => setActiveCommentPostId(post.id)}
+            className="hover:text-blue-600 transition cursor-pointer flex items-center gap-1 text-black"
+          >
+            💬 {post?.comments?.length}
+          </button>
+        </div>
+      </div>
+
+      {/* Tags */}
+      {post?.tags && post?.tags?.length > 0 && (
+        <div className="flex flex-wrap gap-2 mt-3">
+          {post.tags.map((tag) => (
+            <span
+              key={tag.id}
+              onClick={() => router.push(`/tag/${tag.id}`)}
+              className="text-white text-xs font-medium px-2 py-1 rounded bg-blue-500 cursor-pointer hover:opacity-80 transition"
             >
-              {post.image && (
-                <img
-                  src={`/blog/${post.image}`}
-                  alt={post.title}
-                  className="w-full h-60 object-cover"
-                  onClick={() => router.push(`/post/${post.id}`)}
-                />
-              )}
-
-              <div className="p-5 flex flex-col gap-3">
-                {/* Top Bar */}
-                <div className="flex items-center justify-between text-sm text-gray-400">
-                  {post.category && (
-                    <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-xs">
-                      {post.category}
-                    </span>
-                  )}
-                  <span>
-                    {new Date(post.createdAt).toLocaleDateString("az-AZ", {
-                      year: "numeric",
-                      month: "short",
-                      day: "numeric",
-                    })}
-                  </span>
-                </div>
-
-                {/* Title */}
-                <h2
-                  className="text-xl font-semibold text-gray-800 hover:underline"
-                  onClick={() => router.push(`/post/${post.id}`)}
-                >
-                  {post.title}
-                </h2>
-
-                {/* Content */}
-                <p
-                  className="text-gray-600 text-sm"
-                  onClick={() => router.push(`/post/${post.id}`)}
-                >
-                  {post?.content?.length > 100
-                    ? post.content.slice(0, 100) + "..."
-                    : post.content}
-                </p>
-
-                {/* Footer */}
-                <div className="flex justify-between items-center text-sm text-gray-500 mt-2">
-                  <span
-                    onClick={() =>
-                      router.push(
-                        user?.id === post.author.id
-                          ? "/profile"
-                          : `/profile/${post.author.id}`
-                      )
-                    }
-                    className="hover:text-blue-600 cursor-pointer"
-                  >
-                    👤 <strong>{post.author.username}</strong>
-                  </span>
-
-                  <div className="flex gap-3 items-center cursor-pointer">
-                    <LikeButton
-                      postId={post.id}
-                      likes={post.likes}
-                      currentUserId={user?.id}
-                    />
-                    <button
-                      onClick={() => setActiveCommentPostId(post.id)}
-                      className="hover:text-blue-600 transition cursor-pointer"
-                    >
-                      💬 {post?.comments?.length}
-                    </button>
-                  </div>
-                </div>
-
-                {/* Tags */}
-                {post?.tags && post?.tags?.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mt-3">
-                    {post.tags.map((tag) => (
-                      <span
-                        key={tag.id}
-                        onClick={() => router.push(`/tag/${tag.id}`)}
-                        className="text-white text-xs font-medium px-2 py-1 rounded bg-blue-500 cursor-pointer hover:opacity-80 transition"
-                      >
-                        {tag.label}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
+              {tag.label}
+            </span>
           ))}
+        </div>
+      )}
+    </div>
+  </div>
+))}
         </div>
 
       </div>
