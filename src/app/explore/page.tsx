@@ -16,7 +16,13 @@ type Post = {
   };
   createdAt: string;
   likes: { id: number; userId: number; postId: number; createdAt: string }[];
-  comments: { id: number; userId: number; postId: number; createdAt: string }[];
+  comments: {
+    id: number;
+    userId: number;
+    postId: number;
+    createdAt: string;
+    replies?: { id: number }[];
+  }[];
   content: string;
   image?: string;
 };
@@ -311,7 +317,7 @@ export default function BlogPage() {
             </p>
           )}
           {posts.map((post) => (
-            
+
             <div
               key={post.id}
               className="bg-white shadow-lg rounded-2xl overflow-hidden transition-transform transform hover:scale-[1.02] hover:shadow-2xl cursor-pointer"
@@ -381,7 +387,12 @@ export default function BlogPage() {
                       onClick={() => setActiveCommentPostId(post.id)}
                       className="hover:text-blue-600 transition cursor-pointer text-black"
                     >
-                      💬 {post?.comments?.length}
+                      💬  {
+                        post.comments.reduce(
+                          (sum, comment) => sum + 1 + (comment.replies?.length || 0),
+                          0
+                        )
+                      }
                     </button>
                   </div>
                 </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import * as Popover from "@radix-ui/react-popover";
 import { Home, User, Compass, Heart, X } from "lucide-react";
@@ -20,7 +20,13 @@ type Post = {
   };
   createdAt: string;
   likes: { userId: number }[];
-  comments: { id: number; userId: number; postId: number; createdAt: string }[];
+  comments: {
+    id: number;
+    userId: number;
+    postId: number;
+    createdAt: string;
+    replies?: { id: number }[];
+  }[];
   tags: { id: number; label: string; color?: string }[];
   content: string;
   image?: string;
@@ -103,11 +109,20 @@ export default function Profile() {
   const [newPostTitle, setNewPostTitle] = useState("");
   const [newPostContent, setNewPostContent] = useState("");
   const [file, setFile] = useState<File | null>(null);
+  const [loading, setLoading] = useTransition()
 
   const [allTags, setAllTags] = useState<Tag[]>([]);
   const [selectedTags, setSelectedTags] = useState<number[]>([]);
   const [activeCommentPostId, setActiveCommentPostId] = useState<number | null>(null);
   const [reloadCommentCount, setReloadCommentCount] = useState(0);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [formData, setFormData] = useState({
+    username: "",
+    name: "",
+    surname: "",
+    email: "",
+  });
+
 
   useEffect(() => {
     const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
@@ -130,13 +145,16 @@ export default function Profile() {
     }
   }
   async function fetchUserPosts(userId: number) {
-    try {
-      const res = await fetch(`/api/profile/${userId}`);
-      const data = await res.json();
-      setPosts(data.posts);
-    } catch (error) {
-      console.error(error);
-    }
+    setLoading(async () => {
+      try {
+        const res = await fetch(`/api/profile/${userId}`);
+        const data = await res.json();
+        setPosts(data.posts);
+      } catch (error) {
+        console.error(error);
+      }
+    })
+
   }
   const handleDeletePost = async (postId: number) => {
     if (!confirm("Bu postu silmək istədiyinizə əminsiniz?")) {
@@ -202,6 +220,7 @@ export default function Profile() {
       }
     }
 
+
     try {
       const res = await fetch("/api/post", {
         method: "POST",
@@ -229,6 +248,7 @@ export default function Profile() {
       notifyError("Post Yaradılabilmədi!❌")
       alert("Xəta baş verdi");
     }
+
 
   }
   const handleLogout = async () => {
@@ -265,7 +285,6 @@ export default function Profile() {
             </button>
 
             <button
-              onClick={() => router.push(`/Profile`)}
               className="flex items-center gap-2 text-gray-700 hover:text-gray-600 transition"
             >
               <User className="w-5 h-5" />
@@ -280,11 +299,29 @@ export default function Profile() {
               <span className="font-medium text-base">Explore</span>
             </button>
           </div>
-          <div className="hidden sm:flex justify-end items-center space-x-4 mb-8 p-4">
-            <span className="text-gray-700 font-semibold">
-              Welcome, <strong>{user?.username}</strong>
-            </span>
+          <div className="flex justify-between items-center mb-8 p-4">
+            {/* Sol tərəf: Welcome və Profilə düzəliş */}
+            <div className="flex flex-col">
+              <span className="text-gray-700 font-semibold text-lg ">
+                Welcome,<strong>{user?.username}</strong>
+              </span>
+              <button
+                onClick={() => {
+                  setFormData({
+                    username: user.username,
+                    name: user.name,
+                    surname: user.surname,
+                    email: user.email,
+                  });
+                  setShowEditModal(true);
+                }}
+                className="mt-2 bg-yellow-500 text-white px-3 py-1 rounded hover:bg-yellow-600 w-fit"
+              >
+                Edit Profile
+              </button>
+            </div>
 
+            {/* Sağ tərəf: Avatar və çıxış menyusu */}
             <Popover.Root>
               <Popover.Trigger asChild>
                 {user.coverImage ? (
@@ -323,6 +360,7 @@ export default function Profile() {
               </Popover.Portal>
             </Popover.Root>
           </div>
+
         </div>
 
         <div className="mb-6">
@@ -336,126 +374,214 @@ export default function Profile() {
 
         {/* Posts */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {posts?.length === 0 && (
+          {posts === null && (
             <p className="col-span-full text-gray-500 text-center">
               No Posts Yet
             </p>
           )}
 
           {posts.map((post) => (
-  <div
-    key={post.id}
-    className="bg-white shadow-lg rounded-2xl overflow-hidden transition-transform transform hover:scale-[1.02] hover:shadow-2xl"
-    // cursor-pointer burada artıq idi, çünki kartın özünün birbaşa klik hadisəsi yoxdur.
-    // İçərisindəki elementlər (şəkil, başlıq, məzmun) kliklənə bilər.
-  >
-    {post.image && (
-      <div className="relative"> {/* Şəkil üçün relative konteyner */}
-        <img
-          src={`/blog/${post.image}`}
-          alt={post.title}
-          className="w-full h-60 object-cover cursor-pointer"
-          onClick={() => router.push(`/post/${post.id}`)}
-        />
-        {/* Silmə düyməsi */}
-        {user?.id === post.author.id && ( // Yalnız postun müəllifi görsün
-          <button
-            onClick={(e) => {
-              e.stopPropagation(); // Şəkilin click hadisəsinin işə düşməsini dayandırır
-              handleDeletePost(post.id);
-            }}
-            className="absolute top-3 right-3 bg-red-600 hover:bg-red-700 text-white p-2 rounded-full shadow-lg z-10 transition-transform transform hover:scale-110"
-            aria-label="Postu sil" // Ekran oxuyucular üçün əlçatanlıq
-          >
-            <X className="w-5 h-5" /> {/* 'X' ikonu */}
-          </button>
-        )}
-      </div>
-    )}
-
-    <div className="p-5 flex flex-col gap-3">
-      {/* Top Bar */}
-      <div className="flex items-center justify-between text-sm text-gray-400">
-        {post.category && (
-          <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-xs">
-            {post.category}
-          </span>
-        )}
-        <span>
-          {new Date(post.createdAt).toLocaleDateString("az-AZ", {
-            year: "numeric",
-            month: "short",
-            day: "numeric",
-          })}
-        </span>
-      </div>
-
-      {/* Title */}
-      <h2
-        className="text-xl font-semibold text-gray-800 hover:underline cursor-pointer"
-        onClick={() => router.push(`/post/${post.id}`)}
-      >
-        {post.title}
-      </h2>
-
-      {/* Content */}
-      <p
-        className="text-gray-600 text-sm cursor-pointer"
-        onClick={() => router.push(`/post/${post.id}`)}
-      >
-        {post?.content?.length > 100
-          ? post.content.slice(0, 100) + "..."
-          : post.content}
-      </p>
-
-      {/* Footer */}
-      <div className="flex justify-between items-center text-sm text-gray-500 mt-2">
-        <span
-          onClick={() =>
-            router.push(
-              user?.id === post.author.id
-                ? "/profile"
-                : `/profile/${post.author.id}`
-            )
-          }
-          className="hover:text-blue-600 cursor-pointer"
-        >
-          👤 <strong>{post.author.username}</strong>
-        </span>
-
-        <div className="flex gap-3 items-center">
-          <LikeButton
-            postId={post.id}
-            likes={post.likes}
-            currentUserId={user?.id}
-          />
-          <button
-            onClick={() => setActiveCommentPostId(post.id)}
-            className="hover:text-blue-600 transition cursor-pointer flex items-center gap-1 text-black"
-          >
-            💬 {post?.comments?.length}
-          </button>
-        </div>
-      </div>
-
-      {/* Tags */}
-      {post?.tags && post?.tags?.length > 0 && (
-        <div className="flex flex-wrap gap-2 mt-3">
-          {post.tags.map((tag) => (
-            <span
-              key={tag.id}
-              onClick={() => router.push(`/tag/${tag.id}`)}
-              className="text-white text-xs font-medium px-2 py-1 rounded bg-blue-500 cursor-pointer hover:opacity-80 transition"
+            <div
+              key={post.id}
+              className="bg-white shadow-lg rounded-2xl overflow-hidden transition-transform transform hover:scale-[1.02] hover:shadow-2xl"
+            // cursor-pointer burada artıq idi, çünki kartın özünün birbaşa klik hadisəsi yoxdur.
+            // İçərisindəki elementlər (şəkil, başlıq, məzmun) kliklənə bilər.
             >
-              {tag.label}
-            </span>
+              {post.image && (
+                <div className="relative"> {/* Şəkil üçün relative konteyner */}
+                  <img
+                    src={`/blog/${post.image}`}
+                    alt={post.title}
+                    className="w-full h-60 object-cover cursor-pointer"
+                    onClick={() => router.push(`/post/${post.id}`)}
+                  />
+                  {/* Silmə düyməsi */}
+                  {user?.id === post.author.id && ( // Yalnız postun müəllifi görsün
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation(); // Şəkilin click hadisəsinin işə düşməsini dayandırır
+                        handleDeletePost(post.id);
+                      }}
+                      className="absolute top-3 right-3 bg-red-600 hover:bg-red-700 text-white p-2 rounded-full shadow-lg z-10 transition-transform transform hover:scale-110"
+                      aria-label="Postu sil" // Ekran oxuyucular üçün əlçatanlıq
+                    >
+                      <X className="w-5 h-5" /> {/* 'X' ikonu */}
+                    </button>
+                  )}
+                </div>
+              )}
+
+              <div className="p-5 flex flex-col gap-3">
+                {/* Top Bar */}
+                <div className="flex items-center justify-between text-sm text-gray-400">
+                  {post.category && (
+                    <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-xs">
+                      {post.category}
+                    </span>
+                  )}
+                  <span>
+                    {new Date(post.createdAt).toLocaleDateString("az-AZ", {
+                      year: "numeric",
+                      month: "short",
+                      day: "numeric",
+                    })}
+                  </span>
+                </div>
+
+                {/* Title */}
+                <h2
+                  className="text-xl font-semibold text-gray-800 hover:underline cursor-pointer"
+                  onClick={() => router.push(`/post/${post.id}`)}
+                >
+                  {post.title}
+                </h2>
+
+                {/* Content */}
+                <p
+                  className="text-gray-600 text-sm cursor-pointer"
+                  onClick={() => router.push(`/post/${post.id}`)}
+                >
+                  {post?.content?.length > 100
+                    ? post.content.slice(0, 100) + "..."
+                    : post.content}
+                </p>
+
+                {/* Footer */}
+                <div className="flex justify-between items-center text-sm text-gray-500 mt-2">
+                  <span
+                    onClick={() =>
+                      router.push(
+                        user?.id === post.author.id
+                          ? "/profile"
+                          : `/profile/${post.author.id}`
+                      )
+                    }
+                    className="hover:text-blue-600 cursor-pointer"
+                  >
+                    👤 <strong>{post.author.username}</strong>
+                  </span>
+
+                  <div className="flex gap-3 items-center">
+                    <LikeButton
+                      postId={post.id}
+                      likes={post.likes}
+                      currentUserId={user?.id}
+                    />
+                    <button
+                      onClick={() => setActiveCommentPostId(post.id)}
+                      className="hover:text-blue-600 transition cursor-pointer flex items-center gap-1 text-black"
+                    >
+                      💬  {post?.comments?.reduce(
+                        (sum, comment) => sum + 1 + (comment.replies?.length || 0),
+                        0
+                      )
+                      }
+                    </button>
+                  </div>
+                </div>
+
+                {/* Tags */}
+                {post?.tags && post?.tags?.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    {post.tags.map((tag) => (
+                      <span
+                        key={tag.id}
+                        onClick={() => router.push(`/tag/${tag.id}`)}
+                        className="text-white text-xs font-medium px-2 py-1 rounded bg-blue-500 cursor-pointer hover:opacity-80 transition"
+                      >
+                        {tag.label}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
           ))}
+          {loading && (
+            <div className="flex justify-center py-6">
+              <svg
+                className="animate-spin h-8 w-8 text-gray-600"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12" cy="12" r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                ></circle>
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                ></path>
+              </svg>
+            </div>
+          )}
         </div>
-      )}
-    </div>
-  </div>
-))}
-        </div>
+        {showEditModal && (
+          <div
+            className="fixed inset-0 backdrop-blur-sm bg-opacity-40 flex items-center justify-center z-50"
+            onClick={() => setShowEditModal(false)}
+          >
+            <div
+              className="bg-white p-6 rounded w-full max-w-md"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h2 className="text-xl font-bold mb-4">Edit Profile</h2>
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  const res = await fetch(`/api/user/${user.id}`, {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(formData),
+                  });
+
+                  const data = await res.json();
+                  if (res.ok) {
+                    localStorage.setItem("user", JSON.stringify(data.user));
+                    setUser(data.user);
+                    notifySuccess("Profil uğurla yeniləndi! ✅");
+                    setShowEditModal(false);
+                  } else {
+                    notifyError(data.error || "Xəta baş verdi ❌");
+                  }
+                }}
+                className="space-y-4"
+              >
+                {(["username", "name", "surname", "email"] as Array<keyof typeof formData>).map((field) => (
+                  <div key={field}>
+                    <label className="block font-medium capitalize">{field}</label>
+                    <input
+                      type="text"
+                      value={formData[field]}
+                      onChange={(e) => setFormData({ ...formData, [field]: e.target.value })}
+                      className="w-full border rounded px-3 py-2"
+                      required
+                    />
+                  </div>
+                ))}
+                <div className="flex justify-end gap-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowEditModal(false)}
+                    className="px-4 py-2 border rounded"
+                  >
+                    İmtina
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-blue-600 text-white rounded"
+                  >
+                    Yadda saxla
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
 
       </div>
 

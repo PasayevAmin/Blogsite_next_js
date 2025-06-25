@@ -5,19 +5,22 @@ import { PrismaClient } from "@/generated/prisma";
 const prisma = new PrismaClient();
 
 export async function POST(
-  req: NextRequest,
-  { params }: { params: { postId: string } }
+    request: Request,
+  context: { params: Promise<{ postId: string }> }
 ) {
+  const { postId: postIdParam } = await context.params;
+  const postId = parseInt(postIdParam, 10);
+  if (isNaN(postId) || postId <= 0) {
+    return new Response(
+      JSON.stringify({ error: "Invalid post" }),
+      { status: 400, headers: { "Content-Type": "application/json" } }
+    );
+  }
   try {
-      const awaitedParams = await params;  // await etməli olduğun hissə buradır
-  const postId = Number(awaitedParams.postId);
-    if (isNaN(postId)) {
-      return NextResponse.json({ error: "Invalid post ID" }, { status: 400 });
-    }
 
-    const { userId } = await req.json();
-    if (!userId) {
-      return NextResponse.json({ error: "User ID is required" }, { status: 400 });
+  const { userId } = await request.json();
+  if (!userId) {
+    return NextResponse.json({ error: "User ID is required" }, { status: 400 });
     }
 
     const existingLike = await prisma.like.findUnique({

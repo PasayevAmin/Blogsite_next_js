@@ -41,8 +41,13 @@ export async function POST(req: NextRequest) {
           },
         },
         tags: true,
-        likes:true,
-        comments:true
+        likes: true,
+        comments: {
+          include: {
+            replies: true, // 💡 replies-i daxil et
+          },
+        },
+
       },
       orderBy: {
         createdAt: "desc",

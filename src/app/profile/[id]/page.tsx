@@ -19,7 +19,13 @@ type Post = {
   };
   createdAt: string;
   likes: { userId: number }[]; // Changed from number to array of objects
-  comments: { id: number; userId: number; postId: number; createdAt: string }[];
+  comments: {
+    id: number;
+    userId: number;
+    postId: number;
+    createdAt: string;
+    replies?: { id: number }[];
+  }[];
   content: string;
 };
 
@@ -102,7 +108,7 @@ export default function Profile() {
   const router = useRouter();
   const params = useParams();
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
-const [activeCommentPostId, setActiveCommentPostId] = useState<number | null>(null);
+  const [activeCommentPostId, setActiveCommentPostId] = useState<number | null>(null);
   const [reloadCommentCount, setReloadCommentCount] = useState(0);
   const [user, setUser] = useState<{
     id?: number;
@@ -140,7 +146,7 @@ const [activeCommentPostId, setActiveCommentPostId] = useState<number | null>(nu
       }
     }
   }, []);
-  const Commentchange=()=>{
+  const Commentchange = () => {
     const userIdParam = params?.id;
     const userId = userIdParam ? Number(userIdParam) : undefined;
 
@@ -227,7 +233,7 @@ const [activeCommentPostId, setActiveCommentPostId] = useState<number | null>(nu
       console.error("Follow/Unfollow əməliyyatı uğursuz oldu");
     }
   };
-const handleModalClose = () => {
+  const handleModalClose = () => {
     setActiveCommentPostId(null);
     setReloadCommentCount((prev) => prev + 1);
   };
@@ -326,13 +332,18 @@ const handleModalClose = () => {
                     👤 {post.author.username}
                   </span>
                   <div className="cursor-pointer flex gap-3 ">
-                   <LikeButton
+                    <LikeButton
                       postId={post.id}
                       likes={post.likes}
                       currentUserId={user?.id}
                     />
 
-                    <span className="text-black" onClick={() => setActiveCommentPostId(post.id)}>💬 {post.comments.length}</span>
+                    <span className="text-black" onClick={() => setActiveCommentPostId(post.id)}>💬 {
+                      post.comments.reduce(
+                        (sum, comment) => sum + 1 + (comment.replies?.length || 0),
+                        0
+                      )
+                    }</span>
                   </div>
                 </div>
 
@@ -354,7 +365,7 @@ const handleModalClose = () => {
           ))}
         </div>
       </div>
-        {activeCommentPostId && (
+      {activeCommentPostId && (
         <div className="fixed inset-0 z-50 flex justify-center items-center  bg-opacity-50 backdrop-blur-sm">
           <div className="bg-white w-full max-w-5xl h-[80vh] rounded-2xl flex overflow-hidden relative">
             <button
@@ -376,7 +387,7 @@ const handleModalClose = () => {
               <div className="mb-4 text-lg font-semibold">
                 👤 {posts.find(p => p.id === activeCommentPostId)?.author.username}
               </div>
-              <CommentSection postId={activeCommentPostId} fetchFollowedPosts={()=>Commentchange()}  />
+              <CommentSection postId={activeCommentPostId} fetchFollowedPosts={() => Commentchange()} />
             </div>
           </div>
         </div>

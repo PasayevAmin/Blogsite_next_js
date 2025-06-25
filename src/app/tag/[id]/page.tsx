@@ -1,7 +1,7 @@
 "use client";
 import { useParams } from "next/navigation";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useTransition } from "react";
 import dynamic from "next/dynamic";
 const CommentSection = dynamic(() => import("@/app/comment/page"), { ssr: false });
 
@@ -20,7 +20,13 @@ type Post = {
   };
   createdAt: string;
   likes: { userId: number }[];  // Likes - array userId-lərlə
-  comments: { id: number; userId: number; postId: number; createdAt: string }[];
+  comments: {
+    id: number;
+    userId: number;
+    postId: number;
+    createdAt: string;
+    replies?: { id: number }[];
+  }[];
   content: string;
   image?: string;
 };
@@ -102,8 +108,11 @@ export default function Details() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [activeCommentPostId, setActiveCommentPostId] = useState<number | null>(null);
   const [reloadCommentCount, setReloadCommentCount] = useState(0);
+  const [loading, setLoading] = useTransition()
+
 
   async function fetchUserPostfortag(tagId: number) {
+    setLoading(async () => {
     try {
       const res = await fetch(`/api/tag/${tagId}`);
       if (!res.ok) throw new Error("Xəta baş verdi");
@@ -111,12 +120,12 @@ export default function Details() {
       setPosts(data.posts);
     } catch (error) {
       console.error(error);
-    }
+    }})
   }
 
 
-  const Commentchange=()=>{
-if (!tagId) return;
+  const Commentchange = () => {
+    if (!tagId) return;
     const id = Number(tagId);
     if (!isNaN(id)) {
       fetchUserPostfortag(id);
@@ -131,7 +140,7 @@ if (!tagId) return;
       }
     }
   }
- useEffect(() => {
+  useEffect(() => {
     if (!tagId) return;
     const id = Number(tagId);
     if (!isNaN(id)) {
@@ -147,7 +156,7 @@ if (!tagId) return;
       }
     }
   }, [tagId, reloadCommentCount]);
- 
+
 
   if (!posts) {
     return (
@@ -244,7 +253,7 @@ if (!tagId) return;
 
                 <div className="flex justify-between items-center text-sm text-gray-500 mt-2">
                   <span
-                  className="cursor-pointer"
+                    className="cursor-pointer"
                     onClick={() => {
                       const currentUserId = user?.id;
                       const authorId = post.author.id;
@@ -268,13 +277,40 @@ if (!tagId) return;
                       onClick={() => setActiveCommentPostId(post.id)}
                       className="hover:text-blue-600 transition cursor-pointer"
                     >
-                      💬 {post.comments.length}
+                      💬 {
+                        post.comments.reduce(
+                          (sum, comment) => sum + 1 + (comment.replies?.length || 0),
+                          0
+                        )
+                      }
                     </button>
                   </div>
                 </div>
               </div>
             </div>
           ))}
+          {loading && (
+            <div className="flex justify-center py-6">
+              <svg
+                className="animate-spin h-8 w-8 text-gray-600"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12" cy="12" r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                ></circle>
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                ></path>
+              </svg>
+            </div>
+          )}
         </div>
       </div>
 
@@ -300,7 +336,7 @@ if (!tagId) return;
               <div className="mb-4 text-lg font-semibold">
                 👤 {posts.find(p => p.id === activeCommentPostId)?.author.username}
               </div>
-              <CommentSection postId={activeCommentPostId} fetchFollowedPosts={()=>Commentchange()}  />
+              <CommentSection postId={activeCommentPostId} fetchFollowedPosts={() => Commentchange()} />
             </div>
           </div>
         </div>

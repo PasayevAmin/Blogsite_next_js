@@ -12,7 +12,11 @@ export async function GET(req: NextRequest) {
           select: { id: true, username: true, image: true },
         },
         tags: true,
-        comments: true,
+         comments: {
+          include: {
+            replies: true, // 💡 replies-i daxil et
+          },
+        },
         likes: true,
         saved: true,
       },
@@ -23,7 +27,9 @@ export async function GET(req: NextRequest) {
     const sortedPosts = posts
   .map((post) => ({
     ...post,
-    totalScore: post.likes.length + post.comments.length,
+    totalScore: post.likes.length + post.comments.length+post.comments.reduce((acc, comment) => {
+      return acc + comment.replies.length; // hər şərh üçün replies sayını əlavə et
+    }, 0) + post.saved.length, // likes, comments, replies və saved sayını toplayırıq
   }))
   .sort((a, b) => b.totalScore - a.totalScore); 
 

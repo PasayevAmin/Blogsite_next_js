@@ -24,10 +24,18 @@ type Post = {
   };
   createdAt: string;
   likes: { userId: number }[];
-  comments: { id: number; userId: number; postId: number; createdAt: string }[];
+  comments: {
+    id: number;
+    userId: number;
+    postId: number;
+    createdAt: string;
+    replies?: { id: number }[];
+  }[];
   content: string;
   image?: string;
 };
+
+
 
 type User = {
   id?: number;
@@ -110,128 +118,129 @@ function LikeButton({
 
 
 export default function BlogPage() {
-const router = useRouter();
-const [user, setUser] = useState<User>({});
-const [posts, setPosts] = useState<Post[]>([]);
-const [page, setPage] = useState(1);
-const [hasMore, setHasMore] = useState(true);
-const [loading, setLoading] = useState(false);
-const [activeCommentPostId, setActiveCommentPostId] = useState<number | null>(null);
-const [reloadCommentCount, setReloadCommentCount] = useState(0);
+  const router = useRouter();
+  const [user, setUser] = useState<User>({});
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [loading, setLoading] = useState(false);
 
-const fetchFollowedPosts = async (userId: number, pageNumber = 1) => {
+  const [activeCommentPostId, setActiveCommentPostId] = useState<number | null>(null);
+  const [reloadCommentCount, setReloadCommentCount] = useState(0);
 
-  setLoading(true);
+  const fetchFollowedPosts = async (userId: number, pageNumber = 1) => {
 
-  try {
-    const res = await fetch("/api/following_post", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId, page: pageNumber }),
-    });
+    setLoading(true);
 
-    if (!res.ok) throw new Error("Xəta baş verdi");
+    try {
+      const res = await fetch("/api/following_post", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, page: pageNumber }),
+      });
 
-    const data = await res.json();
+      if (!res.ok) throw new Error("Xəta baş verdi");
 
-    if (data.posts.length < 10) {
-      setHasMore(false);
-    }
+      const data = await res.json();
 
-    setPosts((prev) => {
-      const newPosts = data.posts.filter(
-        (p: Post) => !prev.some((existing) => existing.id === p.id)
-      );
-      return [...prev, ...newPosts];
-    });
-
-    setPage((prev) => prev + 1);
-  } catch (error) {
-    console.error("Postlar gətirilə bilmədi:", error);
-  } finally {
-    setLoading(false);
-  }
-};
-
-const fetchCommentsf = () => {
-  if (typeof window !== "undefined") {
-    const storedUserJson = localStorage.getItem("user");
-    if (!storedUserJson) {
-      router.push("/login");
-      return;
-    }
-
-    const storedUser: User = JSON.parse(storedUserJson);
-    if (!storedUser?.id) {
-      router.push("/login");
-      return;
-    }
-
-    setUser(storedUser);
-    fetchFollowedPosts(storedUser.id, 1);
-  }
-};
-
-useEffect(() => {
-  fetchCommentsf();
-}, [router, reloadCommentCount]);
-
-
-const handleModalClose = () => {
-  setActiveCommentPostId(null);
-};
-
-
-
-
-
-useEffect(() => {
-  const handleScroll = () => {
-    if (
-      window.innerHeight + window.scrollY >= document.body.offsetHeight - 100 &&
-      !loading &&
-      hasMore
-    ) {
-      if (user.id) {
-        fetchFollowedPosts(user.id, page);
+      if (data.posts.length < 10) {
+        setHasMore(false);
       }
+
+      setPosts((prev) => {
+        const newPosts = data.posts.filter(
+          (p: Post) => !prev.some((existing) => existing.id === p.id)
+        );
+        return [...prev, ...newPosts];
+      });
+
+      setPage((prev) => prev + 1);
+    } catch (error) {
+      console.error("Postlar gətirilə bilmədi:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  window.addEventListener("scroll", handleScroll);
-  return () => window.removeEventListener("scroll", handleScroll);
-}, [loading, hasMore, page, user.id]);
-
-const goToHome = () => router.push("/");
-const goToProfile = () => router.push("/profile");
-const gotoExplore = () => router.push("/explore");
-
-const handleLogout = async () => {
-  try {
-    const res = await fetch("/api/auth/logout", { method: "POST" });
-    if (res.ok) {
-      localStorage.removeItem("user");
-      router.push("/login");
-      notifySuccess("Çıxış Olundu!🎉");
-    } else {
-      alert("Çıxış zamanı xəta baş verdi.");
-    }
-  } catch (error) {
-    console.error("Çıxış zamanı xəta:", error);
-  }
-};
-
-const uniqueTags = useMemo(() => {
-  const tagMap = new Map<number, Tag>();
-  posts.forEach((post) => {
-    post.tags?.forEach((tag) => {
-      if (!tagMap.has(tag.id)) {
-        tagMap.set(tag.id, tag);
+  const fetchCommentsf = () => {
+    if (typeof window !== "undefined") {
+      const storedUserJson = localStorage.getItem("user");
+      if (!storedUserJson) {
+        router.push("/login");
+        return;
       }
+
+      const storedUser: User = JSON.parse(storedUserJson);
+      if (!storedUser?.id) {
+        router.push("/login");
+        return;
+      }
+
+      setUser(storedUser);
+      fetchFollowedPosts(storedUser.id, 1);
+    }
+  };
+
+  useEffect(() => {
+    fetchCommentsf();
+  }, [router, reloadCommentCount]);
+
+
+  const handleModalClose = () => {
+    setActiveCommentPostId(null);
+  };
+
+
+
+
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (
+        window.innerHeight + window.scrollY >= document.body.offsetHeight - 100 &&
+        !loading &&
+        hasMore
+      ) {
+        if (user.id) {
+          fetchFollowedPosts(user.id, page);
+        }
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [loading, hasMore, page, user.id]);
+
+  const goToHome = () => router.push("/");
+  const goToProfile = () => router.push("/profile");
+  const gotoExplore = () => router.push("/explore");
+
+  const handleLogout = async () => {
+    try {
+      const res = await fetch("/api/auth/logout", { method: "POST" });
+      if (res.ok) {
+        localStorage.removeItem("user");
+        router.push("/login");
+        notifySuccess("Çıxış Olundu!🎉");
+      } else {
+        alert("Çıxış zamanı xəta baş verdi.");
+      }
+    } catch (error) {
+      console.error("Çıxış zamanı xəta:", error);
+    }
+  };
+
+  const uniqueTags = useMemo(() => {
+    const tagMap = new Map<number, Tag>();
+    posts.forEach((post) => {
+      post.tags?.forEach((tag) => {
+        if (!tagMap.has(tag.id)) {
+          tagMap.set(tag.id, tag);
+        }
+      });
     });
-  });
-  return Array.from(tagMap.values());
-}, [posts]);
+    return Array.from(tagMap.values());
+  }, [posts]);
 
 
   return (
@@ -350,7 +359,7 @@ const uniqueTags = useMemo(() => {
                       >
                         👤 <strong>{post.author.username}</strong>
                       </span>
-                      
+
                       <span>
                         📅{" "} { }
                         {new Date(post.createdAt).toLocaleDateString("az-AZ", {
@@ -364,7 +373,15 @@ const uniqueTags = useMemo(() => {
                         likes={post.likes}
                         currentUserId={user?.id}
                       />
-                      <span className="text-black" onClick={() => setActiveCommentPostId(post.id)}>💬 {post.comments.length}</span>
+                      <span className="text-black" onClick={() => setActiveCommentPostId(post.id)}>💬
+                        {
+                          post.comments.reduce(
+                            (sum, comment) => sum + 1 + (comment.replies?.length || 0),
+                            0
+                          )
+                        }
+
+                      </span>
                     </div>
                     <p className="text-gray-700 mb-4">
                       {post.content.length > 100
@@ -399,7 +416,28 @@ const uniqueTags = useMemo(() => {
             ))}
 
             {loading && (
-              <div className="text-center text-gray-500 font-medium mt-6">Yüklənir...</div>
+              <div className="flex justify-center py-6">
+                <svg
+                  className="animate-spin h-8 w-8 text-gray-600"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx={12}
+                    cy={12}
+                    r={10}
+                    stroke="currentColor"
+                    strokeWidth={4}
+                  />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                  />
+                </svg>
+              </div>
             )}
             {!hasMore && (
               <div className="text-center text-gray-400 font-medium mt-6">Daha çox post yoxdur.</div>

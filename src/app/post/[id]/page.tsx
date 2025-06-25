@@ -3,7 +3,7 @@
 import CommentSection from "@/app/comment/page";
 import { useParams } from "next/navigation";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useTransition } from "react";
 
 type Post = {
   id: number;
@@ -15,12 +15,18 @@ type Post = {
     color: string
   }[]
   author: {
-    id:string;
+    id: string;
     username: string;
   };
   createdAt: string;
   likes: { userId: number }[]; // Added likes property
-comments: { id: number; userId: number; postId: number; createdAt: string }[];
+  comments: {
+    id: number;
+    userId: number;
+    postId: number;
+    createdAt: string;
+    replies?: { id: number }[];
+  }[];
   content: string;
   image?: string;
 };
@@ -91,9 +97,8 @@ function LikeButton({
     <button
       onClick={toggleLike}
       disabled={loading}
-      className={`flex items-center gap-1 px-3 py-1 rounded cursor-pointer ${
-        liked ? "bg-red-600 text-white" : "bg-gray-300 text-black"
-      }`}
+      className={`flex items-center gap-1 px-3 py-1 rounded cursor-pointer ${liked ? "bg-red-600 text-white" : "bg-gray-300 text-black"
+        }`}
       aria-label={liked ? "Unlike" : "Like"}
     >
       {liked ? "❤️" : "🤍"} {likesCount}
@@ -107,9 +112,11 @@ export default function Details() {
   const postId = params?.id;
   const [post, setPost] = useState<Post | null>(null);
   const [showModal, setShowModal] = useState(false);
-const [activeCommentPostId, setActiveCommentPostId] = useState<number | null>(null);
+  const [activeCommentPostId, setActiveCommentPostId] = useState<number | null>(null);
   const [reloadCommentCount, setReloadCommentCount] = useState(0);
   // Get current user from localStorage
+    const [loading, setLoading] = useTransition()
+  
   const [user, setUser] = useState<{ id: string } | null>(null);
 
   useEffect(() => {
@@ -120,6 +127,7 @@ const [activeCommentPostId, setActiveCommentPostId] = useState<number | null>(nu
   }, []);
 
   async function fetchUserPost(id: number) {
+    setLoading(async () => {
     try {
       const res = await fetch(`/api/post/${id}`);
       if (!res.ok) throw new Error("Xəta baş verdi");
@@ -129,7 +137,7 @@ const [activeCommentPostId, setActiveCommentPostId] = useState<number | null>(nu
 
     } catch (error) {
       console.error(error);
-    }
+    }})
   }
 
   useEffect(() => {
@@ -140,8 +148,8 @@ const [activeCommentPostId, setActiveCommentPostId] = useState<number | null>(nu
       fetchUserPost(id);
     }
   }, [postId]);
-  const Commnetchange=()=>{
-     if (!postId) return;
+  const Commnetchange = () => {
+    if (!postId) return;
 
     const id = Number(postId);
     if (!isNaN(id)) {
@@ -150,9 +158,30 @@ const [activeCommentPostId, setActiveCommentPostId] = useState<number | null>(nu
   }
 
   if (!post) {
-    return <p className="text-center mt-10 text-gray-500">Yüklənir…</p>;
+    return loading ? (
+      <div className="flex justify-center py-6">
+        <svg
+          className="animate-spin h-8 w-8 text-gray-600"
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+        >
+          <circle
+            className="opacity-25"
+            cx="12" cy="12" r="10"
+            stroke="currentColor"
+            strokeWidth="4"
+          ></circle>
+          <path
+            className="opacity-75"
+            fill="currentColor"
+            d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+          ></path>
+        </svg>
+      </div>
+    ) : null;
   }
-   const handleModalClose = () => {
+  const handleModalClose = () => {
     setActiveCommentPostId(null);
     setReloadCommentCount((prev) => prev + 1);
   };
@@ -160,6 +189,7 @@ const [activeCommentPostId, setActiveCommentPostId] = useState<number | null>(nu
   return (
     <div className="max-w-4xl mx-auto py-10 px-4">
       <div className="bg-white shadow-lg rounded-lg overflow-hidden">
+        
         {/* Şəkil hissəsi */}
         {post.image && (
           <div className="w-full h-[500px] overflow-hidden">
@@ -186,6 +216,7 @@ const [activeCommentPostId, setActiveCommentPostId] = useState<number | null>(nu
                 {tag.label}
               </span>
             ))}
+            
           </div>
 
 
@@ -195,18 +226,23 @@ const [activeCommentPostId, setActiveCommentPostId] = useState<number | null>(nu
           </h1>
           <div className="flex justify-center items-center text-gray-500 text-sm gap-4 mb-6 ">
             <span className="cursor-pointer" onClick={() =>
-                          router.push(
-                            user?.id === post.author.id
-                              ? "/profile"
-                              : `/profile/${post.author.id}`
-                          )
-                        }>👤 <strong>{post.author.username}</strong></span>
+              router.push(
+                user?.id === post.author.id
+                  ? "/profile"
+                  : `/profile/${post.author.id}`
+              )
+            }>👤 <strong>{post.author.username}</strong></span>
             <span>📅 {new Date(post.createdAt).toLocaleDateString("az-AZ", { day: "2-digit", month: "long", year: "numeric" })}</span>
-             <LikeButton 
-                    postId={post.id}
-                    likes={post.likes}
-                  />
-            <span className="cursor-pointer text-black"  onClick={() => setActiveCommentPostId(post.id)}>💬 {post.comments.length}</span>
+            <LikeButton
+              postId={post.id}
+              likes={post.likes}
+            />
+            <span className="cursor-pointer text-black" onClick={() => setActiveCommentPostId(post.id)}>💬  {
+              post.comments.reduce(
+                (sum, comment) => sum + 1 + (comment.replies?.length || 0),
+                0
+              )
+            }</span>
           </div>
           <p className="text-gray-700 leading-relaxed text-lg mb-6">
             {post.content}
@@ -214,6 +250,7 @@ const [activeCommentPostId, setActiveCommentPostId] = useState<number | null>(nu
 
         </div>
       </div>
+      
 
       {/* Modal */}
       {showModal && (
@@ -229,7 +266,7 @@ const [activeCommentPostId, setActiveCommentPostId] = useState<number | null>(nu
           />
         </div>
       )}
-       {activeCommentPostId && (
+      {activeCommentPostId && (
         <div className="fixed inset-0 z-50 flex justify-center items-center  bg-opacity-50 backdrop-blur-sm">
           <div className="bg-white w-full max-w-5xl h-[80vh] rounded-2xl flex overflow-hidden relative">
             <button
@@ -251,7 +288,7 @@ const [activeCommentPostId, setActiveCommentPostId] = useState<number | null>(nu
               <div className="mb-4 text-lg font-semibold">
                 👤 {post?.author.username}
               </div>
-              <CommentSection postId={activeCommentPostId} fetchFollowedPosts={()=>Commnetchange()}  />
+              <CommentSection postId={activeCommentPostId} fetchFollowedPosts={() => Commnetchange()} />
             </div>
           </div>
         </div>

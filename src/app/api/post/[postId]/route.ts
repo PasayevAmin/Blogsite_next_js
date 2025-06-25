@@ -8,9 +8,9 @@ export async function GET(
   request: Request,
   context: { params: Promise<{ postId: string }> }
 ) {
- const { postId: postIdParam } = await context.params;
+  const { postId: postIdParam } = await context.params;
   const postId = parseInt(postIdParam, 10);
-if (isNaN(postId) || postId <= 0) {
+  if (isNaN(postId) || postId <= 0) {
     return new Response(
       JSON.stringify({ error: "Invalid post" }),
       { status: 400, headers: { "Content-Type": "application/json" } }
@@ -22,7 +22,12 @@ if (isNaN(postId) || postId <= 0) {
       where: { id: postId },
       include: {
         tags: true,
-        comments: true,
+        comments: {
+          include: {
+            replies: true, // 💡 replies-i daxil et
+          },
+        },
+
         likes: true,
         saved: true,
         author: {
@@ -45,9 +50,9 @@ if (isNaN(postId) || postId <= 0) {
 }
 export async function DELETE(
   request: Request,
-  context: { params: { postId: string } } // Context params Promise olaraq gəlmir, birbaşa obyektdir
+  context:  { params: Promise<{ postId: string }> } // Context params Promise olaraq gəlmir, birbaşa obyektdir
 ) {
-  const { postId: postIdParam } = context.params;
+  const { postId: postIdParam } = await context.params;
   const postId = parseInt(postIdParam, 10);
 
   if (isNaN(postId) || postId <= 0) {

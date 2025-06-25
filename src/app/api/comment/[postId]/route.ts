@@ -1,27 +1,33 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PrismaClient } from "@/generated/prisma";
+import { console } from "node:inspector/promises";
 
 const prisma = new PrismaClient();
 
 // Yeni şərh əlavə etmək (POST)
 export async function POST(
-  req: NextRequest,
-  { params }: { params: { postId: string } }
+  request: Request,
+  context: { params: Promise<{ postId: string }> }
 ) {
+  const { postId: postIdParam } = await context.params;
+  const postId = parseInt(postIdParam, 10);
+  if (isNaN(postId) || postId <= 0) {
+    return new Response(
+      JSON.stringify({ error: "Invalid post" }),
+      { status: 400, headers: { "Content-Type": "application/json" } }
+    );
+  }
   try {
-      const awaitedParams = await params;  // await etməli olduğun hissə buradır
-  const postId = Number(awaitedParams.postId);
-    const { content, userId } = await req.json();
+    const { content, userId } = await request.json();
 
     if (!content || typeof content !== "string" || content.trim() === "" || !userId || isNaN(postId)) {
-  return NextResponse.json({ error: "Məlumatlar yanlışdır" }, { status: 400 });
-}
-
+      return NextResponse.json({ error: "Məlumatlar yanlışdır" }, { status: 400 });
+    }
 
     const newComment = await prisma.comment.create({
       data: {
         content,
-        postId,
+        postId: postId,
         authorId: userId,
       },
       include: {
@@ -38,21 +44,24 @@ export async function POST(
   }
 }
 
-// Mövcud şərhləri və cavablarını əldə etmək (GET)
-export async function GET(
-  req: NextRequest,
-  { params }: { params: { postId: string } }
-) {
-  try {
-      const awaitedParams = await params;  // await etməli olduğun hissə buradır
-  const postId = Number(awaitedParams.postId);
 
-    if (isNaN(postId)) {
-      return NextResponse.json({ error: "Yanlış ID" }, { status: 400 });
-    }
+
+export async function GET(
+  request: Request,
+  context: { params: Promise<{ postId: string }> }
+) {
+  const { postId: postIdParam } = await context.params;
+  const postId = parseInt(postIdParam, 10);
+  if (isNaN(postId) || postId <= 0) {
+    return new Response(
+      JSON.stringify({ error: "Invalid post" }),
+      { status: 400, headers: { "Content-Type": "application/json" } }
+    );
+  }
+  try {
 
     const comments = await prisma.comment.findMany({
-      where: { postId },
+      where: { postId: postId },
       include: {
         author: {
           select: { id: true, username: true },
