@@ -7,7 +7,8 @@ import { Home, User, Compass, Heart } from "lucide-react";
 import dynamic from "next/dynamic";
 import { Toaster } from "react-hot-toast";
 import { notifySuccess } from "@/app/lib/toast/toasthelper";
-const CommentSection = dynamic(() => import("@/app/comment/page"), { ssr: false });
+import PostSearch from "./components/PostSearch";
+const CommentSection = dynamic(() => import("@/app/components/Comment"), { ssr: false });
 type Tag = {
   id: number;
   label: string;
@@ -255,24 +256,24 @@ export default function BlogPage() {
                 onClick={goToHome}
                 className="flex items-center gap-2 text-gray-700 hover:text-blue-600 transition"
               >
-                <Home className="w-5 h-5" />
-                <span className="font-medium text-base">Home</span>
+                <Home className="w-5 h-5 cursor-pointer" />
+                <span className="cursor-pointer font-medium text-base">Home</span>
               </button>
 
               <button
                 onClick={goToProfile}
                 className="flex items-center gap-2 text-blue-700 hover:text-gray-600 transition"
               >
-                <User className="w-5 h-5" />
-                <span className="font-medium text-base">Profile</span>
+                <User className="w-5 h-5 cursor-pointer" />
+                <span className="cursor-pointer font-medium text-base">Profile</span>
               </button>
 
               <button
                 onClick={gotoExplore}
                 className="flex items-center gap-2 text-blue-700 hover:text-gray-600 transition"
               >
-                <Compass className="w-5 h-5" />
-                <span className="font-medium text-base">Explore</span>
+                <Compass className="w-5 h-5 cursor-pointer" />
+                <span className="cursor-pointer font-medium text-base">Explore</span>
               </button>
             </div>
           </div>
@@ -447,12 +448,8 @@ export default function BlogPage() {
           {/* Sidebar */}
           <div className="space-y-6">
             <div className="bg-white p-6 rounded shadow">
-              <h3 className="text-lg font-bold mb-2">Search</h3>
-              <input
-                type="text"
-                placeholder="Type and hit enter"
-                className="w-full border rounded px-3 py-2 mt-2"
-              />
+              <h3 className="text-lg font-bold mb-2 pl-6">Search</h3>
+              <PostSearch />
             </div>
 
             <div className="bg-white p-6 rounded shadow">

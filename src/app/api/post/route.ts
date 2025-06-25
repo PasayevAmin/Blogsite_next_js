@@ -63,7 +63,14 @@ export async function POST(req: NextRequest) {
             username: true
           }
         },
-        tags: true,// yeni postun tag-lərini də cavaba əlavə et
+        tags: true,
+        likes: true,
+        saved: true,
+        comments: {
+          include: {
+            replies: true, // replies-i daxil et
+          },
+        },
       },
       data: {
         title,

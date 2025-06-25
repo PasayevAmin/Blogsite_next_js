@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import * as Popover from "@radix-ui/react-popover";
 import { Home, User, Compass, Heart, X } from "lucide-react";
-import CommentSection from "../comment/page";
+import CommentSection from "../components/Comment";
 import { notifyError, notifySuccess } from "@/app/lib/toast/toasthelper";
 import { Toaster } from "react-hot-toast";
 
@@ -241,6 +241,7 @@ export default function Profile() {
       setFile(null);
       setSelectedTags([]);
       setShowCreateModal(false);
+
       notifySuccess("Post Yaradıldı!🎉")
 
     } catch (error) {
@@ -280,23 +281,23 @@ export default function Profile() {
               onClick={() => router.push(`/`)}
               className="flex items-center gap-2 text-blue-700 hover:text-blue-600 transition"
             >
-              <Home className="w-5 h-5" />
-              <span className="font-medium text-base">Home</span>
+              <Home className="w-5 h-5 cursor-pointer" />
+              <span className="cursor-pointer font-medium text-base">Home</span>
             </button>
 
             <button
               className="flex items-center gap-2 text-gray-700 hover:text-gray-600 transition"
             >
-              <User className="w-5 h-5" />
-              <span className="font-medium text-base">Profile</span>
+              <User className="w-5 h-5 cursor-pointer" />
+              <span className="cursor-pointer font-medium text-base">Profile</span>
             </button>
 
             <button
               onClick={() => router.push(`/explore`)}
               className="flex items-center gap-2 text-blue-700 hover:text-gray-600 transition"
             >
-              <Compass className="w-5 h-5" />
-              <span className="font-medium text-base">Explore</span>
+              <Compass className="w-5 h-5 cursor-pointer" />
+              <span className="cursor-pointer font-medium text-base">Explore</span>
             </button>
           </div>
           <div className="flex justify-between items-center mb-8 p-4">

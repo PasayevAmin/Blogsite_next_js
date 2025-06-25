@@ -4,7 +4,8 @@ import { useRouter } from "next/navigation";
 import * as Popover from "@radix-ui/react-popover";
 import { useEffect, useState, useCallback } from "react";
 import { Home, User, Compass, Heart } from "lucide-react";
-import CommentSection from "../comment/page";
+import CommentSection from "../components/Comment";
+import PostSearch from "@/app/components/PostSearch";
 
 type Post = {
   id: number;
@@ -81,7 +82,7 @@ function LikeButton({
     <button
       onClick={toggleLike}
       disabled={loading}
-      className={`flex items-center gap-1 px-3 py-1 rounded ${liked ? "bg-red-600 text-white" : "bg-gray-300 text-black"
+      className={`flex items-center gap-1 px-3 py-1 rounded cursor-pointer ${liked ? "bg-red-600 text-white" : "bg-gray-300 text-black "
         }`}
       aria-label={liked ? "Unlike" : "Like"}
     >
@@ -214,24 +215,24 @@ export default function BlogPage() {
                 onClick={() => router.push(`/`)}
                 className="flex items-center gap-2 text-blue-700 hover:text-blue-600 transition"
               >
-                <Home className="w-5 h-5" />
-                <span className="font-medium text-base">Home</span>
+                <Home className="w-5 h-5 cursor-pointer " />
+                <span className="cursor-pointer font-medium text-base">Home</span>
               </button>
 
               <button
                 onClick={() => router.push(`/profile`)}
-                className="flex items-center gap-2 text-blue-700 hover:text-gray-600 transition"
+                className="  flex items-center gap-2 text-blue-700 hover:text-gray-600 transition"
               >
-                <User className="w-5 h-5" />
-                <span className="font-medium text-base">Profile</span>
+                <User className="w-5 h-5 cursor-pointer" />
+                <span className="cursor-pointer font-medium text-base">Profile</span>
               </button>
 
               <button
                 onClick={() => router.push(`/explore`)}
                 className="flex items-center gap-2 text-gray-700 hover:text-gray-600 transition"
               >
-                <Compass className="w-5 h-5" />
-                <span className="font-medium text-base">Explore</span>
+                <Compass className="w-5 h-5 cursor-pointer" />
+                <span className="cursor-pointer font-medium text-base">Explore</span>
               </button>
             </div>
           </div>
@@ -273,7 +274,7 @@ export default function BlogPage() {
         </div>
         <div className="flex space-x-4 w-full lg:w-[600px]">
           {/* Search Section */}
-          <div className="flex-1 bg-white p-6 rounded-xl shadow-md">
+          {/* <div className="flex-1 bg-white p-6 rounded-xl shadow-md">
             <h3 className="text-lg font-bold mb-3 text-gray-800">Axtarış</h3>
             <input
               type="text"
@@ -285,6 +286,10 @@ export default function BlogPage() {
               }}
               className="w-full border border-gray-300 focus:ring-2 focus:ring-blue-500 rounded-lg px-4 py-2 text-sm outline-none"
             />
+          </div> */}
+          <div className="bg-white p-6 rounded shadow">
+            <h3 className="text-lg font-bold mb-2 pl-6">Search</h3>
+            <PostSearch />
           </div>
 
           {/* Popular Tags Section */}

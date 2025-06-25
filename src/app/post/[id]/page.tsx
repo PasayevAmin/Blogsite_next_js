@@ -1,6 +1,6 @@
 "use client";
 
-import CommentSection from "@/app/comment/page";
+import CommentSection from "@/app/components/Comment";
 import { useParams } from "next/navigation";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";

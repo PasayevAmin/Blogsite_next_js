@@ -3,7 +3,7 @@ import { useParams } from "next/navigation";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import dynamic from "next/dynamic";
-const CommentSection = dynamic(() => import("@/app/comment/page"), { ssr: false });
+const CommentSection = dynamic(() => import("@/app/components/Comment"), { ssr: false });
 
 type Post = {
   id: number;

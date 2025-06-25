@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import CommentSection from "@/app/comment/page";
+import CommentSection from "@/app/components/Comment";
 import { Compass, Home, User } from "lucide-react";
 
 // --- Types

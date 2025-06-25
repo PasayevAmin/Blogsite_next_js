@@ -48,74 +48,64 @@ export async function GET(
     );
   }
 }
+
+
 export async function DELETE(
   request: Request,
-  context:  { params: Promise<{ postId: string }> } // Context params Promise olaraq gəlmir, birbaşa obyektdir
+  context: { params: Promise<{ postId: string }> }
 ) {
-  const { postId: postIdParam } = await context.params;
+ const { postId: postIdParam } = await context.params;
   const postId = parseInt(postIdParam, 10);
-
   if (isNaN(postId) || postId <= 0) {
     return new Response(
-      JSON.stringify({ error: "Yanlış post ID" }),
+      JSON.stringify({ error: "Invalid post" }),
       { status: 400, headers: { "Content-Type": "application/json" } }
     );
   }
 
   try {
-    // 1. Postu verilənlər bazasından silməzdən əvvəl şəklin yolunu götürün
+    // 1. Post mövcuddurmu və şəkli varmı?
     const postToDelete = await prisma.post.findUnique({
       where: { id: postId },
-      select: { image: true }, // Yalnız 'image' xüsusiyyətini seçirik
+      select: { image: true },
     });
 
     if (!postToDelete) {
-      return new Response(
-        JSON.stringify({ error: "Post tapılmadı" }),
-        { status: 404, headers: { "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "Post tapılmadı" }), {
+        status: 404,
+        headers: { "Content-Type": "application/json" },
+      });
     }
 
+    // 2. Əlaqəli məlumatları sil (öncəliklə `replies`, sonra `comments`, `likes`, `saved`)
+    await prisma.reply.deleteMany({ where: { comment: { postId } } });
+    await prisma.comment.deleteMany({ where: { postId } });
+    await prisma.like.deleteMany({ where: { postId } });
+    await prisma.savedPost.deleteMany({ where: { postId } });
+
+    // 3. Şəkli fayl sistemindən sil
     const imageFileName = postToDelete.image;
-
-    // 2. Əgər postun şəkli varsa, onu fayl sistemindən silin
     if (imageFileName) {
-      // Şəkil faylının tam yolunu qurun
-      // process.cwd() tətbiqin kök qovluğunu verir
-      const imagePath = path.join(process.cwd(), 'public', 'blog', imageFileName);
-
+      const imagePath = path.join(process.cwd(), "public", "blog", imageFileName);
       try {
-        await fs.unlink(imagePath); // Şəkli asinxron olaraq silin
+        await fs.unlink(imagePath);
         console.log(`Şəkil silindi: ${imagePath}`);
       } catch (fileError: any) {
-        // Şəkil silinərkən xəta baş verərsə (məsələn, fayl tapılmazsa)
-        // Bu xəta postun silinməsinə mane olmamalıdır
-        if (fileError.code === 'ENOENT') {
-          console.warn(`Şəkil tapılmadı, lakin post silinəcək: ${imagePath}`);
-        } else {
-          console.error(`Şəkil silinərkən xəta baş verdi: ${imagePath}`, fileError);
-          // Həqiqi bir fayl sistemi xətası olarsa, postu silməzdən əvvəl xəta qaytara bilərsiniz
-          // Lakin adətən, faylın silinməsi uğursuz olsa belə, verilənlər bazası əməliyyatı davam etdirilir
-          // Bu, sizin tətbiqinizin tələblərinə bağlıdır.
-          // return new Response(
-          //   JSON.stringify({ error: `Şəkil silinərkən xəta: ${fileError.message}` }),
-          //   { status: 500, headers: { "Content-Type": "application/json" } }
-          // );
+        if (fileError.code !== "ENOENT") {
+          console.error("Şəkil silinərkən xəta:", fileError);
         }
       }
     }
 
-    // 3. Şəkil uğurla silindikdən (və ya heç olmadıqda/xəta baş verdikdə belə davam etdikdə) postu silin
-    const deletedPost = await prisma.post.delete({
-      where: { id: postId },
-    });
+    // 4. Postu sil
+    const deletedPost = await prisma.post.delete({ where: { id: postId } });
 
     return new Response(
-      JSON.stringify({ message: "Post uğurla silindi", post: deletedPost }),
+      JSON.stringify({ message: "Post və əlaqəli məlumatlar silindi", post: deletedPost }),
       { status: 200, headers: { "Content-Type": "application/json" } }
     );
   } catch (error) {
-    console.error("Post silinərkən daxili xəta:", error);
+    console.error("Silinmə zamanı xəta:", error);
     return new Response(
       JSON.stringify({ error: "Post silinərkən daxili server xətası" }),
       { status: 500, headers: { "Content-Type": "application/json" } }
