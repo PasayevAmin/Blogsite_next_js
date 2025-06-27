@@ -40,6 +40,7 @@ export async function POST(req: NextRequest) {
             username: true,
           },
         },
+        saved: true, // 💡 saved-i daxil et
         tags: true,
         likes: true,
         comments: {
@@ -47,7 +48,6 @@ export async function POST(req: NextRequest) {
             replies: true, // 💡 replies-i daxil et
           },
         },
-
       },
       orderBy: {
         createdAt: "desc",

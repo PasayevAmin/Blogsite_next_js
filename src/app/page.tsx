@@ -8,6 +8,7 @@ import dynamic from "next/dynamic";
 import { Toaster } from "react-hot-toast";
 import { notifySuccess } from "@/app/lib/toast/toasthelper";
 import PostSearch from "./components/PostSearch";
+import SaveButton from "./components/SaveButton";
 const CommentSection = dynamic(() => import("@/app/components/Comment"), { ssr: false });
 type Tag = {
   id: number;
@@ -34,6 +35,7 @@ type Post = {
   }[];
   content: string;
   image?: string;
+  saved: { userId: number }[];
 };
 
 
@@ -46,6 +48,7 @@ type User = {
   surname?: string;
   email?: string;
   coverImage?: string;
+ 
 };
 
 
@@ -383,6 +386,11 @@ export default function BlogPage() {
                         }
 
                       </span>
+                      <SaveButton
+                        currentUserId={user.id ?? 0}
+                        postId={post.id}
+                        saved={post.saved}
+                      />
                     </div>
                     <p className="text-gray-700 mb-4">
                       {post.content.length > 100

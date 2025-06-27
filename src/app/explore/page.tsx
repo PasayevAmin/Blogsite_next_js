@@ -6,6 +6,7 @@ import { useEffect, useState, useCallback } from "react";
 import { Home, User, Compass, Heart } from "lucide-react";
 import CommentSection from "../components/Comment";
 import PostSearch from "@/app/components/PostSearch";
+import SaveButton from "../components/SaveButton";
 
 type Post = {
   id: number;
@@ -26,6 +27,7 @@ type Post = {
   }[];
   content: string;
   image?: string;
+  saved: { userId: number }[];
 };
 function LikeButton({
   postId,
@@ -399,6 +401,11 @@ export default function BlogPage() {
                         )
                       }
                     </button>
+                    <SaveButton
+                      currentUserId={user.id ?? 0}
+                      postId={post.id}
+                      saved={post.saved}
+                    />
                   </div>
                 </div>
 

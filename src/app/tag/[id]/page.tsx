@@ -3,6 +3,7 @@ import { useParams } from "next/navigation";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import dynamic from "next/dynamic";
+import SaveButton from "@/app/components/SaveButton";
 const CommentSection = dynamic(() => import("@/app/components/Comment"), { ssr: false });
 
 type Post = {
@@ -29,6 +30,7 @@ type Post = {
   }[];
   content: string;
   image?: string;
+  saved: { userId: number }[];
 };
 
 type User = {
@@ -113,14 +115,15 @@ export default function Details() {
 
   async function fetchUserPostfortag(tagId: number) {
     setLoading(async () => {
-    try {
-      const res = await fetch(`/api/tag/${tagId}`);
-      if (!res.ok) throw new Error("Xəta baş verdi");
-      const data = await res.json();
-      setPosts(data.posts);
-    } catch (error) {
-      console.error(error);
-    }})
+      try {
+        const res = await fetch(`/api/tag/${tagId}`);
+        if (!res.ok) throw new Error("Xəta baş verdi");
+        const data = await res.json();
+        setPosts(data.posts);
+      } catch (error) {
+        console.error(error);
+      }
+    })
   }
 
 
@@ -192,7 +195,7 @@ export default function Details() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {posts.length === 0 && (
+          {posts===null && (
             <div className="col-span-full text-center text-gray-500 text-lg">
               Heç bir yazı tapılmadı.
             </div>
@@ -284,6 +287,11 @@ export default function Details() {
                         )
                       }
                     </button>
+                    <SaveButton
+                      currentUserId={user.id ?? 0}
+                      postId={post.id}
+                      saved={post.saved}
+                    />
                   </div>
                 </div>
               </div>

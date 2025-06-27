@@ -1,6 +1,7 @@
 "use client";
 
 import CommentSection from "@/app/components/Comment";
+import SaveButton from "@/app/components/SaveButton";
 import { useParams } from "next/navigation";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
@@ -29,6 +30,7 @@ type Post = {
   }[];
   content: string;
   image?: string;
+  saved: { userId: number }[];
 };
 
 function LikeButton({
@@ -115,8 +117,8 @@ export default function Details() {
   const [activeCommentPostId, setActiveCommentPostId] = useState<number | null>(null);
   const [reloadCommentCount, setReloadCommentCount] = useState(0);
   // Get current user from localStorage
-    const [loading, setLoading] = useTransition()
-  
+  const [loading, setLoading] = useTransition()
+
   const [user, setUser] = useState<{ id: string } | null>(null);
 
   useEffect(() => {
@@ -128,16 +130,17 @@ export default function Details() {
 
   async function fetchUserPost(id: number) {
     setLoading(async () => {
-    try {
-      const res = await fetch(`/api/post/${id}`);
-      if (!res.ok) throw new Error("Xəta baş verdi");
+      try {
+        const res = await fetch(`/api/post/${id}`);
+        if (!res.ok) throw new Error("Xəta baş verdi");
 
-      const data = await res.json();
-      setPost(data.posts);
+        const data = await res.json();
+        setPost(data.posts);
 
-    } catch (error) {
-      console.error(error);
-    }})
+      } catch (error) {
+        console.error(error);
+      }
+    })
   }
 
   useEffect(() => {
@@ -189,7 +192,7 @@ export default function Details() {
   return (
     <div className="max-w-4xl mx-auto py-10 px-4">
       <div className="bg-white shadow-lg rounded-lg overflow-hidden">
-        
+
         {/* Şəkil hissəsi */}
         {post.image && (
           <div className="w-full h-[500px] overflow-hidden">
@@ -216,7 +219,7 @@ export default function Details() {
                 {tag.label}
               </span>
             ))}
-            
+
           </div>
 
 
@@ -243,6 +246,11 @@ export default function Details() {
                 0
               )
             }</span>
+            <SaveButton
+              currentUserId={user ? Number(user.id) : 0}
+              postId={post.id}
+              saved={post.saved}
+            />
           </div>
           <p className="text-gray-700 leading-relaxed text-lg mb-6">
             {post.content}
@@ -250,7 +258,7 @@ export default function Details() {
 
         </div>
       </div>
-      
+
 
       {/* Modal */}
       {showModal && (

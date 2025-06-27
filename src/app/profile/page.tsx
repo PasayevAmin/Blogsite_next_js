@@ -7,6 +7,7 @@ import { Home, User, Compass, Heart, X } from "lucide-react";
 import CommentSection from "../components/Comment";
 import { notifyError, notifySuccess } from "@/app/lib/toast/toasthelper";
 import { Toaster } from "react-hot-toast";
+import SaveButton from "../components/SaveButton";
 
 
 
@@ -30,6 +31,7 @@ type Post = {
   tags: { id: number; label: string; color?: string }[];
   content: string;
   image?: string;
+  saved?: { userId: number }[]; // Added property to fix the error
 };
 
 type Tag = {
@@ -104,6 +106,7 @@ export default function Profile() {
 
   const [user, setUser] = useState<any>({});
   const [posts, setPosts] = useState<Post[]>([]);
+
   const [showCreateModal, setShowCreateModal] = useState(false);
 
   const [newPostTitle, setNewPostTitle] = useState("");
@@ -116,6 +119,9 @@ export default function Profile() {
   const [activeCommentPostId, setActiveCommentPostId] = useState<number | null>(null);
   const [reloadCommentCount, setReloadCommentCount] = useState(0);
   const [showEditModal, setShowEditModal] = useState(false);
+
+  const [activeTab, setActiveTab] = useState<"post" | "saved">("post");
+
   const [formData, setFormData] = useState({
     username: "",
     name: "",
@@ -134,6 +140,41 @@ export default function Profile() {
       fetchTags();
     }
   }, []);
+  useEffect(() => {
+  if (user?.id) {
+    setLoading(() => {
+      if (activeTab === "post") {
+        fetchUserPosts(user.id);
+      } else if (activeTab === "saved") {
+        fetchSaveddPosts(user.id);
+      }
+    });
+  }
+}, [activeTab, user.id, reloadCommentCount]);
+
+const fetchSaveddPosts = async (userId: number) => {
+  try {
+    const res = await fetch("/api/saved_posts", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ userId }),
+    });
+
+    const data = await res.json();
+
+    if (res.ok && data.success) {
+      setPosts(data.posts); // ✅ `savedPosts` state-in olmalıdır
+    } else {
+      console.error("Postlar alınmadı:", data.message || "Naməlum xəta");
+    }
+  } catch (error) {
+    console.error("Xəta baş verdi:", error);
+  }
+};
+
+
   const Commentchange = () => {
     const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
     if (!storedUser?.id) {
@@ -144,6 +185,7 @@ export default function Profile() {
       fetchTags();
     }
   }
+  
   async function fetchUserPosts(userId: number) {
     setLoading(async () => {
       try {
@@ -305,6 +347,8 @@ export default function Profile() {
             <div className="flex flex-col">
               <span className="text-gray-700 font-semibold text-lg ">
                 Welcome,<strong>{user?.username}</strong>
+                <strong>{user.followers?.length }</strong>
+
               </span>
               <button
                 onClick={() => {
@@ -373,47 +417,68 @@ export default function Profile() {
           </button>
         </div>
 
+
+
+        {/* Tabs */}
+        <div className="flex justify-center gap-6 border-b mb-6">
+          <button
+            onClick={() => setActiveTab("post")}
+            className={`py-2 px-4 font-semibold ${activeTab === "post"
+                ? "border-b-4 border-blue-600 text-blue-600"
+                : "text-gray-600"
+              }`}
+          >
+            My Posts
+          </button>
+          <button
+            onClick={() => setActiveTab("saved")}
+            className={`py-2 px-4 font-semibold ${activeTab === "saved"
+                ? "border-b-4 border-blue-600 text-blue-600"
+                : "text-gray-600"
+              }`}
+          >
+            Saved Posts
+          </button>
+        </div>
+
         {/* Posts */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {posts === null && (
+          {posts.length === 0 && (
             <p className="col-span-full text-gray-500 text-center">
-              No Posts Yet
+              {activeTab === "post" ? "No My Posts" : "No Saved Posts"}
             </p>
           )}
-
-          {posts.map((post) => (
+        {activeTab==="post"&&(
+          <>
+             {posts.map((post) => (
             <div
               key={post.id}
               className="bg-white shadow-lg rounded-2xl overflow-hidden transition-transform transform hover:scale-[1.02] hover:shadow-2xl"
-            // cursor-pointer burada artıq idi, çünki kartın özünün birbaşa klik hadisəsi yoxdur.
-            // İçərisindəki elementlər (şəkil, başlıq, məzmun) kliklənə bilər.
             >
               {post.image && (
-                <div className="relative"> {/* Şəkil üçün relative konteyner */}
+                <div className="relative">
                   <img
                     src={`/blog/${post.image}`}
                     alt={post.title}
                     className="w-full h-60 object-cover cursor-pointer"
                     onClick={() => router.push(`/post/${post.id}`)}
                   />
-                  {/* Silmə düyməsi */}
-                  {user?.id === post.author.id && ( // Yalnız postun müəllifi görsün
+                  {user?.id === post.author.id && (
                     <button
                       onClick={(e) => {
-                        e.stopPropagation(); // Şəkilin click hadisəsinin işə düşməsini dayandırır
+                        e.stopPropagation();
                         handleDeletePost(post.id);
                       }}
                       className="absolute top-3 right-3 bg-red-600 hover:bg-red-700 text-white p-2 rounded-full shadow-lg z-10 transition-transform transform hover:scale-110"
-                      aria-label="Postu sil" // Ekran oxuyucular üçün əlçatanlıq
+                      aria-label="Postu sil"
                     >
-                      <X className="w-5 h-5" /> {/* 'X' ikonu */}
+                      <X className="w-5 h-5" />
                     </button>
                   )}
                 </div>
               )}
 
               <div className="p-5 flex flex-col gap-3">
-                {/* Top Bar */}
                 <div className="flex items-center justify-between text-sm text-gray-400">
                   {post.category && (
                     <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-xs">
@@ -429,7 +494,6 @@ export default function Profile() {
                   </span>
                 </div>
 
-                {/* Title */}
                 <h2
                   className="text-xl font-semibold text-gray-800 hover:underline cursor-pointer"
                   onClick={() => router.push(`/post/${post.id}`)}
@@ -437,7 +501,6 @@ export default function Profile() {
                   {post.title}
                 </h2>
 
-                {/* Content */}
                 <p
                   className="text-gray-600 text-sm cursor-pointer"
                   onClick={() => router.push(`/post/${post.id}`)}
@@ -447,7 +510,6 @@ export default function Profile() {
                     : post.content}
                 </p>
 
-                {/* Footer */}
                 <div className="flex justify-between items-center text-sm text-gray-500 mt-2">
                   <span
                     onClick={() =>
@@ -472,17 +534,22 @@ export default function Profile() {
                       onClick={() => setActiveCommentPostId(post.id)}
                       className="hover:text-blue-600 transition cursor-pointer flex items-center gap-1 text-black"
                     >
-                      💬  {post?.comments?.reduce(
-                        (sum, comment) => sum + 1 + (comment.replies?.length || 0),
+                      💬{" "}
+                      {post?.comments?.reduce(
+                        (sum, comment) =>
+                          sum + 1 + (comment.replies?.length || 0),
                         0
-                      )
-                      }
+                      )}
                     </button>
+                    <SaveButton
+                      postId={post.id}
+                      saved={post.saved ?? []}
+                      currentUserId={user?.id}
+                    />
                   </div>
                 </div>
 
-                {/* Tags */}
-                {post?.tags && post?.tags?.length > 0 && (
+                {post?.tags?.length > 0 && (
                   <div className="flex flex-wrap gap-2 mt-3">
                     {post.tags.map((tag) => (
                       <span
@@ -498,6 +565,7 @@ export default function Profile() {
               </div>
             </div>
           ))}
+
           {loading && (
             <div className="flex justify-center py-6">
               <svg
@@ -508,7 +576,9 @@ export default function Profile() {
               >
                 <circle
                   className="opacity-25"
-                  cx="12" cy="12" r="10"
+                  cx="12"
+                  cy="12"
+                  r="10"
                   stroke="currentColor"
                   strokeWidth="4"
                 ></circle>
@@ -520,7 +590,155 @@ export default function Profile() {
               </svg>
             </div>
           )}
+          </>
+        )}
+         {activeTab === "saved" && (
+          <>
+              {posts.map((post) => (
+            <div
+              key={post.id}
+              className="bg-white shadow-lg rounded-2xl overflow-hidden transition-transform transform hover:scale-[1.02] hover:shadow-2xl"
+            >
+              {post.image && (
+                <div className="relative">
+                  <img
+                    src={`/blog/${post.image}`}
+                    alt={post.title}
+                    className="w-full h-60 object-cover cursor-pointer"
+                    onClick={() => router.push(`/post/${post.id}`)}
+                  />
+                  {user?.id === post.author.id && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeletePost(post.id);
+                      }}
+                      className="absolute top-3 right-3 bg-red-600 hover:bg-red-700 text-white p-2 rounded-full shadow-lg z-10 transition-transform transform hover:scale-110"
+                      aria-label="Postu sil"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  )}
+                </div>
+              )}
+
+              <div className="p-5 flex flex-col gap-3">
+                <div className="flex items-center justify-between text-sm text-gray-400">
+                  {post.category && (
+                    <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-xs">
+                      {post.category}
+                    </span>
+                  )}
+                  <span>
+                    {new Date(post.createdAt).toLocaleDateString("az-AZ", {
+                      year: "numeric",
+                      month: "short",
+                      day: "numeric",
+                    })}
+                  </span>
+                </div>
+
+                <h2
+                  className="text-xl font-semibold text-gray-800 hover:underline cursor-pointer"
+                  onClick={() => router.push(`/post/${post.id}`)}
+                >
+                  {post.title}
+                </h2>
+
+                <p
+                  className="text-gray-600 text-sm cursor-pointer"
+                  onClick={() => router.push(`/post/${post.id}`)}
+                >
+                  {post?.content?.length > 100
+                    ? post.content.slice(0, 100) + "..."
+                    : post.content}
+                </p>
+
+                <div className="flex justify-between items-center text-sm text-gray-500 mt-2">
+                  <span
+                    onClick={() =>
+                      router.push(
+                        user?.id === post.author.id
+                          ? "/profile"
+                          : `/profile/${post.author.id}`
+                      )
+                    }
+                    className="hover:text-blue-600 cursor-pointer"
+                  >
+                    👤 <strong>{post.author.username}</strong>
+                  </span>
+
+                  <div className="flex gap-3 items-center">
+                    <LikeButton
+                      postId={post.id}
+                      likes={post.likes}
+                      currentUserId={user?.id}
+                    />
+                    <button
+                      onClick={() => setActiveCommentPostId(post.id)}
+                      className="hover:text-blue-600 transition cursor-pointer flex items-center gap-1 text-black"
+                    >
+                      💬{" "}
+                      {post?.comments?.reduce(
+                        (sum, comment) =>
+                          sum + 1 + (comment.replies?.length || 0),
+                        0
+                      )}
+                    </button>
+                    <SaveButton
+                      postId={post.id}
+                      saved={post.saved ?? []}
+                      currentUserId={user?.id}
+                    />
+                  </div>
+                </div>
+
+                {post?.tags?.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    {post.tags.map((tag) => (
+                      <span
+                        key={tag.id}
+                        onClick={() => router.push(`/tag/${tag.id}`)}
+                        className="text-white text-xs font-medium px-2 py-1 rounded bg-blue-500 cursor-pointer hover:opacity-80 transition"
+                      >
+                        {tag.label}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+
+          {loading && (
+            <div className="flex justify-center py-6">
+              <svg
+                className="animate-spin h-8 w-8 text-gray-600"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                ></circle>
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                ></path>
+              </svg>
+            </div>
+          )}
+          </>
+         )}
         </div>
+
+
         {showEditModal && (
           <div
             className="fixed inset-0 backdrop-blur-sm bg-opacity-40 flex items-center justify-center z-50"

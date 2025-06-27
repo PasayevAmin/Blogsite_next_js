@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import CommentSection from "@/app/components/Comment";
 import { Compass, Home, User } from "lucide-react";
+import SaveButton from "@/app/components/SaveButton";
 
 // --- Types
 
@@ -27,6 +28,7 @@ type Post = {
     replies?: { id: number }[];
   }[];
   content: string;
+  saved: { userId: number }[];
 };
 
 type Tag = {
@@ -344,6 +346,11 @@ export default function Profile() {
                         0
                       )
                     }</span>
+                    <SaveButton
+                      currentUserId={user.id ?? 0}
+                      postId={post.id}
+                      saved={post.saved}
+                    />
                   </div>
                 </div>
 
