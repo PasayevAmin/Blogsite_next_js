@@ -9,6 +9,7 @@ import { Toaster } from "react-hot-toast";
 import { notifySuccess } from "@/app/lib/toast/toasthelper";
 import PostSearch from "./components/PostSearch";
 import SaveButton from "./components/SaveButton";
+import { userAgent } from "next/server";
 const CommentSection = dynamic(() => import("@/app/components/Comment"), { ssr: false });
 type Tag = {
   id: number;
@@ -48,7 +49,7 @@ type User = {
   surname?: string;
   email?: string;
   coverImage?: string;
- 
+
 };
 
 
@@ -152,11 +153,23 @@ export default function BlogPage() {
       }
 
       setPosts((prev) => {
+        const updatedPosts = data.posts.map((newPost: Post) => {
+          const existing = prev.find((p) => p.id === newPost.id);
+          return existing ? newPost : null;
+        }).filter(Boolean);
+
         const newPosts = data.posts.filter(
-          (p: Post) => !prev.some((existing) => existing.id === p.id)
+          (newPost: Post) => !prev.some((p) => p.id === newPost.id)
         );
-        return [...prev, ...newPosts];
+
+        // Remove replaced ones and add updated + new
+        const filteredPrev = prev.filter(
+          (p) => !updatedPosts.some((up: Post | null) => up!.id === p.id)
+        );
+
+        return [...filteredPrev, ...updatedPosts.filter(Boolean), ...newPosts];
       });
+
 
       setPage((prev) => prev + 1);
     } catch (error) {
@@ -186,12 +199,21 @@ export default function BlogPage() {
   };
 
   useEffect(() => {
-    fetchCommentsf();
-  }, [router, reloadCommentCount]);
+    if (!user.id) return; // user.id undefined olduqda fetch çağırma
+
+    fetchFollowedPosts(user.id, 1);
+  }, [reloadCommentCount, user.id]);
+  useEffect(() => {
+    fetchCommentsf(); // yalnız bir dəfə login olmuş user-i localStorage-dan çəkir
+  }, []);
 
 
   const handleModalClose = () => {
     setActiveCommentPostId(null);
+    setReloadCommentCount((prev) => prev + 1);
+    if (user.id !== undefined) {
+      fetchFollowedPosts(user.id); // Refresh posts after closing modal
+    }
   };
 
 

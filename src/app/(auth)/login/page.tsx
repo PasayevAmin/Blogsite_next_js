@@ -43,6 +43,7 @@ export default function LoginPage() {
           JSON.stringify({
             id: data.user.id,
             username: data.user.username,
+            bio: data.user.bio,
             role: data.user.role,
             name: data.user.name,
             surname: data.user.surname,

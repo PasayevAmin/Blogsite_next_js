@@ -9,7 +9,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   const { id: userIdParam } = await params;
   const userId = parseInt(userIdParam, 10);
   const body = await request.json();
-  const { username, name, surname, email } = body;
+  const { username, name, surname, email, bio } = body;
 
   try {
     const updatedUser = await prisma.user.update({
@@ -18,6 +18,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
         username,
         name,
         surname,
+        bio:bio|| "",
         email,
       },
     });

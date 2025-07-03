@@ -150,11 +150,21 @@ export default function BlogPage() {
         }
 
         setPosts((prev) => {
-          const existingIds = new Set(prev.map((p) => p.id));
-          const filteredNewPosts = Array.isArray(data?.posts)
-            ? data.posts.filter((p: Post) => !existingIds.has(p.id))
-            : [];
-          return [...prev, ...filteredNewPosts];
+          const updatedPosts = data.posts.map((newPost: Post) => {
+            const existing = prev.find((p) => p.id === newPost.id);
+            return existing ? newPost : null;
+          }).filter(Boolean);
+
+          const newPosts = data.posts.filter(
+            (newPost: Post) => !prev.some((p) => p.id === newPost.id)
+          );
+
+          // Remove replaced ones and add updated + new
+          const filteredPrev = prev.filter(
+            (p) => !updatedPosts.some((up: Post | null) => up!.id === p.id)
+          );
+
+          return [...filteredPrev, ...updatedPosts.filter(Boolean), ...newPosts];
         });
 
 
@@ -198,6 +208,11 @@ export default function BlogPage() {
       console.error("Çıxış zamanı xəta:", error);
     }
   };
+  useEffect(() => {
+    if (reloadCommentCount > 0) {
+      loadPosts(0); // Reload posts when comment count changes
+    }
+  }, [reloadCommentCount]);
   const handleModalClose = () => {
     setActiveCommentPostId(null);
     setReloadCommentCount((prev) => prev + 1);
@@ -275,20 +290,7 @@ export default function BlogPage() {
           </div>
         </div>
         <div className="flex space-x-4 w-full lg:w-[600px]">
-          {/* Search Section */}
-          {/* <div className="flex-1 bg-white p-6 rounded-xl shadow-md">
-            <h3 className="text-lg font-bold mb-3 text-gray-800">Axtarış</h3>
-            <input
-              type="text"
-              placeholder="Etiket, başlıq və s."
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  router.push(`/search?query=${e.currentTarget.value}`);
-                }
-              }}
-              className="w-full border border-gray-300 focus:ring-2 focus:ring-blue-500 rounded-lg px-4 py-2 text-sm outline-none"
-            />
-          </div> */}
+
           <div className="bg-white p-6 rounded shadow">
             <h3 className="text-lg font-bold mb-2 pl-6">Search</h3>
             <PostSearch />

@@ -11,14 +11,15 @@ interface Post {
     id: number;
     username: string;
     image?: string;
-  };                                        
+  };
 }
 
 export default function PostSearch() {
   const router = useRouter();
   const [searchTerm, setSearchTerm] = useState("");
   const [posts, setPosts] = useState<Post[]>([]);
-  const [user, setUser] = useState<{ id: number; username: string; image?: string } | null>(null);
+  const [user, setUser] = useState<{ id: number; username: string; coverImage?: string } | null>(null);
+  const [currentUser, setCurrentUser] = useState<{ id: number } | null>(null);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -26,16 +27,17 @@ export default function PostSearch() {
       if (!storedUser?.id) {
         window.location.href = "/login";
       } else {
-        setUser(storedUser);
-        // loadPosts(0); // Remove or implement loadPosts if needed
+        setCurrentUser(storedUser);
       }
     }
   }, []);
+
   useEffect(() => {
     const fetchPosts = async () => {
       const res = await fetch(`/api/post/search?title=${encodeURIComponent(searchTerm)}`);
       const data = await res.json();
       setPosts(data.posts);
+      setUser(data.user);
     };
 
     const timeout = setTimeout(() => {
@@ -43,6 +45,7 @@ export default function PostSearch() {
         fetchPosts();
       } else {
         setPosts([]);
+        setUser(null);
       }
     }, 300);
 
@@ -70,22 +73,44 @@ export default function PostSearch() {
         )}
       </div>
 
-      {/* 🔽 Nəticələr */}
+      {/* 👤 Tapılan istifadəçi (əgər varsa) */}
+      {user && (
+        <div
+          className="mt-6 bg-white border border-gray-200 rounded-xl p-4 shadow-sm flex items-center gap-4 hover:shadow-md transition cursor-pointer"
+          onClick={() =>
+            router.push(
+              currentUser?.id === user.id ? "/profile" : `/profile/${user.id}`
+            )
+          }
+        >
+          <img
+            src={`/uploads/${user.coverImage}`}
+            alt="User Avatar"
+            className="w-16 h-16 rounded-full border object-cover cursor-pointer"
+          />
+
+          <span className="text-gray-800 font-semibold">@{user.username}</span>
+        </div>
+      )}
+
+      {/* 📄 Nəticələr */}
       <ul className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
         {posts.map((post) => (
           <li
             key={post.id}
             className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm hover:shadow-md transition"
           >
-            <h3 onClick={() => router.push(`/post/${post.id}`)} className="font-semibold text-lg text-gray-800 truncate cursor-pointer">
+            <h3
+              onClick={() => router.push(`/post/${post.id}`)}
+              className="font-semibold text-lg text-gray-800 truncate cursor-pointer"
+            >
               {post.title}
             </h3>
             <div className="flex items-center gap-2 mt-2 text-sm text-gray-600">
-
               <span
                 onClick={() =>
                   router.push(
-                    user?.id === post.author.id
+                    currentUser?.id === post.author.id
                       ? "/profile"
                       : `/profile/${post.author.id}`
                   )
@@ -95,7 +120,10 @@ export default function PostSearch() {
                 👤 <strong>{post.author.username}</strong>
               </span>
             </div>
-            <p onClick={() => router.push(`/post/${post.id}`)} className="text-sm text-gray-600 mt-2 cursor-pointer">
+            <p
+              onClick={() => router.push(`/post/${post.id}`)}
+              className="text-sm text-gray-600 mt-2 cursor-pointer"
+            >
               {post.content.slice(0, 100)}...
             </p>
           </li>
@@ -104,7 +132,7 @@ export default function PostSearch() {
 
       {posts.length === 0 && searchTerm.trim() !== "" && (
         <div className="text-center text-gray-500 mt-6">
-          Heç bir uyğun post tapılmadı.
+          Heç bir uyğun post və ya istifadəçi tapılmadı.
         </div>
       )}
     </div>

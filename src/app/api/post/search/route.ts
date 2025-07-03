@@ -36,6 +36,19 @@ export async function GET(req: NextRequest) {
       createdAt: "desc",
     },
   });
+  const user = await prisma.user.findFirst({
+    where: {
+      username: {
+        contains: q,
+      },
+    },
+    select: {
+      id: true,
+      username: true,
+      coverImage: true,
+      image: true,
+    },
+  });
 
-  return NextResponse.json({ posts });
+  return NextResponse.json({ posts, user });
 }

@@ -55,6 +55,7 @@ export async function POST(request: NextRequest) {
         role: user.role,
         name: user.name,
         surname: user.surname,
+        bio: user.bio,
         coverImage:user.coverImage
       },
       JWT_SECRET,
@@ -72,6 +73,7 @@ export async function POST(request: NextRequest) {
         name: user.name,
         surname: user.surname,
         role: user.role,
+        bio: user.bio,
         coverImage:user.coverImage
       },
     });
