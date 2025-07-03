@@ -31,6 +31,9 @@ export async function POST(req: NextRequest) {
           },
         },
       },
+      orderBy: {
+        createdAt: "desc",
+      },
     });
 
     const posts = savedPosts.map((saved) => saved.post);

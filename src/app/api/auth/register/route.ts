@@ -64,8 +64,7 @@ export async function POST(request: NextRequest) {
         age: validAge,
         surname: validSurname,
         password: hashedPassword,
-        coverImage: coverImage,
-        updatedAt: new Date()
+        coverImage:coverImage
       },
     });
 

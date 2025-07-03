@@ -1,10 +1,8 @@
 // app/api/isFollowing/route.ts
 
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@/generated/prisma";
 
-const prisma = new PrismaClient();
-
+import prisma from "@/app/api/db/db"; // Prisma client import
 export async function POST(req: NextRequest) {
   const body = await req.json();
   const { followerId, followingId } = body;

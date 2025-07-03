@@ -318,12 +318,12 @@ export default function BlogPage() {
 
         <br></br>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {posts === null && (
+          {posts.length === 0 && (
             <p className="col-span-full text-gray-500 text-center">
               Heç bir yazı tapılmadı.
             </p>
           )}
-          {posts.map((post) => (
+          {posts?.map((post) => (
 
             <div
               key={post.id}

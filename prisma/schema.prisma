@@ -3,10 +3,14 @@ generator client {
   output   = "../src/generated/prisma"
 }
 
+// datasource db {
+//   provider = "postgresql"
+//   url      = env("DATABASE_URL")
+//   directUrl   = env("Direct_URL")
+// }
 datasource db {
-  provider = "postgresql"
+  provider = "mysql"
   url      = env("DATABASE_URL")
-  directUrl   = env("Direct_URL")
 }
 
 model User {

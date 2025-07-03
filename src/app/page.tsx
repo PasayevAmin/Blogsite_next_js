@@ -349,7 +349,7 @@ export default function BlogPage() {
         {/* Main Content */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-10">
-            {posts.map((post) => (
+            {posts?.map((post) => (
               <div
                 key={post.id}
                 className="p-[2px] bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 rounded-lg cursor-pointer hover:shadow-xl transition-shadow duration-300"
