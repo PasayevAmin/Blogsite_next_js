@@ -313,14 +313,12 @@ export default function BlogPage() {
                 {user.coverImage ? (
                   <img
                     src={`/uploads/${user.coverImage}`}
-                    alt="User Avatar"
-                    className="w-16 h-16 rounded-full border object-cover cursor-pointer"
+                    alt="Profil"
+                    className="w-20 h-20 rounded-full border-2 border-yellow-400 object-cover cursor-pointer shadow-md hover:scale-105 transition-transform"
                   />
                 ) : (
-                  <div className="w-16 h-16 rounded-full border bg-gray-300 flex items-center justify-center cursor-pointer">
-                    <span className="text-gray-600 font-bold text-xl">
-                      {user.username?.[0]?.toUpperCase() || "U"}
-                    </span>
+                  <div className="w-20 h-20 rounded-full border-2 border-yellow-400 bg-gray-200 flex items-center justify-center text-gray-700 font-bold text-3xl shadow-md cursor-pointer hover:scale-105 transition-transform">
+                    {user.username?.[0]?.toUpperCase() || "U"}
                   </div>
                 )}
               </Popover.Trigger>
