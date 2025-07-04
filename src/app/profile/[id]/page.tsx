@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import CommentSection from "@/app/components/Comment";
 import { Compass, Home, User } from "lucide-react";
 import SaveButton from "@/app/components/SaveButton";
+import timeAgo from "@/app/components/TimeAgo";
 
 // --- Types
 
@@ -37,16 +38,19 @@ type Tag = {
 };
 
 
-
 function LikeButton({
   postId,
   likes,
   currentUserId,
+  onLikeChange, // optional callback
 }: {
   postId: number;
   likes: { userId: number }[];
   currentUserId?: number;
+  onLikeChange?: () => void;
 }) {
+   currentUserId = JSON.parse(localStorage.getItem("user") || "{}").id;
+
   const router = useRouter();
 
   const [liked, setLiked] = useState(
@@ -54,6 +58,11 @@ function LikeButton({
   );
   const [likesCount, setLikesCount] = useState(likes.length);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    setLiked(currentUserId ? likes.some((like) => like.userId === currentUserId) : false);
+    setLikesCount(likes.length);
+  }, [likes, currentUserId]);
 
   async function toggleLike() {
     if (loading) return;
@@ -79,6 +88,7 @@ function LikeButton({
       if (res.ok) {
         setLiked(data.liked);
         setLikesCount((count) => count + (data.liked ? 1 : -1));
+        if (onLikeChange) onLikeChange(); // Notify parent to refresh post data if needed
       } else {
         alert(data.error || "Xəta baş verdi");
       }
@@ -88,8 +98,7 @@ function LikeButton({
 
     setLoading(false);
   }
-
-  return (
+   return (
     <button
       onClick={toggleLike}
       disabled={loading}
@@ -100,8 +109,9 @@ function LikeButton({
       {liked ? "❤️" : "🤍"} {likesCount}
     </button>
   );
-}
 
+  // ...rest of the button render
+}
 
 
 
@@ -303,10 +313,10 @@ export default function Profile() {
             >
               <div className="p-5 flex flex-col gap-3">
                 <div className="flex items-center justify-between text-sm text-gray-400">
-                  {post.category && (
-                    <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-xs">{post.category}</span>
-                  )}
-                  <span>{new Date(post.createdAt).toLocaleDateString("az-AZ", { year: "numeric", month: "short", day: "numeric" })}</span>
+
+                  <p className="text-xs text-gray-400 mt-2">
+                    {timeAgo(post.createdAt)}
+                  </p>
                 </div>
 
                 {post.image && (

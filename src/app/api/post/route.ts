@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
     const posts = await prisma.post.findMany({
       include: {
         author: {
-          select: { id: true, username: true, image: true },
+          select: { id: true, username: true, coverImage: true },
         },
         tags: true,
          comments: {
@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
         author: {
           select: {
             id: true,
-            username: true
+            username: true,
           }
         },
         tags: true,

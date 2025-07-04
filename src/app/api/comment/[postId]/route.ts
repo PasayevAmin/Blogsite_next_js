@@ -32,7 +32,7 @@ export async function POST(
       },
       include: {
         author: {
-          select: { id: true, username: true },
+          select: { id: true, username: true }, // coverImage əlavə edildi
         },
       },
     });
@@ -64,12 +64,12 @@ export async function GET(
       where: { postId: postId },
       include: {
         author: {
-          select: { id: true, username: true },
+          select: { id: true, username: true , coverImage: true }, // coverImage əlavə edildi
         },
         replies: {
           include: {
             author: {
-              select: { id: true, username: true },
+              select: { id: true, username: true , coverImage: true }, // coverImage əlavə edildi
             },
           },
           orderBy: { createdAt: "asc" },

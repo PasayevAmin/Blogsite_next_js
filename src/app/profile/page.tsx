@@ -9,7 +9,8 @@ import { notifyError, notifySuccess } from "@/app/lib/toast/toasthelper";
 import { Toaster } from "react-hot-toast";
 import SaveButton from "../components/SaveButton";
 import { tryLoadManifestWithRetries } from "next/dist/server/load-components";
-
+import timeAgo from "../components/TimeAgo";
+import { MessageCircle, Eye } from "lucide-react";
 
 
 type Post = {
@@ -19,6 +20,7 @@ type Post = {
   author: {
     id: string;
     username: string;
+    coverImage?: string; // Added coverImage to match the user object
   };
   createdAt: string;
   likes: { userId: number }[];
@@ -33,6 +35,7 @@ type Post = {
   content: string;
   image?: string;
   saved?: { userId: number }[]; // Added property to fix the error
+  views?: number; // Added property to fix the error
 };
 
 type Tag = {
@@ -388,7 +391,7 @@ export default function Profile() {
             {/* Sol tərəf: Salamlaşma və redaktə */}
             <div className="flex flex-col items-start gap-3">
               <h2 className="text-2xl font-bold text-gray-800 tracking-tight">
-                Salam, <span className="text-yellow-600">{user?.username}</span>
+                 <span className="text-yellow-600">{user?.username}</span>
               </h2>
               <div className="flex items-center gap-6 text-gray-600 text-sm">
                 <div className="flex items-center gap-1">
@@ -429,7 +432,7 @@ export default function Profile() {
                   <img
                     src={`/uploads/${user.coverImage}`}
                     alt="Profil"
-                    className="w-20 h-20 rounded-full border-2 border-yellow-400 object-cover cursor-pointer shadow-md hover:scale-105 transition-transform"
+                    className="w-20 h-20 rounded-full border-2 border-red-400 object-cover cursor-pointer shadow-md hover:scale-105 transition-transform"
                   />
                 ) : (
                   <div className="w-20 h-20 rounded-full border-2 border-yellow-400 bg-gray-200 flex items-center justify-center text-gray-700 font-bold text-3xl shadow-md cursor-pointer hover:scale-105 transition-transform">
@@ -519,16 +522,40 @@ export default function Profile() {
               {posts?.map((post) => (
                 <div
                   key={post.id}
-                  className="bg-white shadow-lg rounded-2xl overflow-hidden transition-transform transform hover:scale-[1.02] hover:shadow-2xl"
+                  className=" bg-white shadow-lg rounded-2xl overflow-hidden transition-transform transform hover:scale-[1.02] hover:shadow-2xl"
                 >
                   {post.image && (
-                    <div className="relative">
+                    <div className="relative group cursor-pointer" onClick={() => router.push(`/post/${post.id}`)}>
                       <img
                         src={`/blog/${post.image}`}
                         alt={post.title}
-                        className="w-full h-60 object-cover cursor-pointer"
-                        onClick={() => router.push(`/post/${post.id}`)}
+                        className="w-full h-60 object-cover"
                       />
+
+                      {/* Hover overlay */}
+                       <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                    <div className="flex gap-6 text-white text-sm font-semibold select-none">
+                      <div className="flex items-center gap-1">
+                        <Heart className="w-5 h-5" color="white" />
+                        <span>{post.likes.length}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <MessageCircle className="w-5 h-5" color="white" />
+                        <span>
+                          {post.comments.reduce(
+                            (sum, comment) => sum + 1 + (comment.replies?.length || 0),
+                            0
+                          )}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Eye className="w-5 h-5" color="white" />
+                        <span>{post.views ?? 0}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                      {/* Sil düyməsi */}
                       {user?.id === post.author.id && (
                         <button
                           onClick={(e) => {
@@ -542,6 +569,7 @@ export default function Profile() {
                         </button>
                       )}
                     </div>
+
                   )}
 
                   <div className="p-5 flex flex-col gap-3">
@@ -662,42 +690,43 @@ export default function Profile() {
                   className="bg-white shadow-lg rounded-2xl overflow-hidden transition-transform transform hover:scale-[1.02] hover:shadow-2xl"
                 >
                   {post.image && (
-                    <div className="relative">
+                    <div className="relative group cursor-pointer">
                       <img
                         src={`/blog/${post.image}`}
                         alt={post.title}
-                        className="w-full h-60 object-cover cursor-pointer"
+                        className="w-full h-60 object-cover"
                         onClick={() => router.push(`/post/${post.id}`)}
                       />
-                      {user?.id === post.author.id && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeletePost(post.id);
-                          }}
-                          className="absolute top-3 right-3 bg-red-600 hover:bg-red-700 text-white p-2 rounded-full shadow-lg z-10 transition-transform transform hover:scale-110"
-                          aria-label="Postu sil"
-                        >
-                          <X className="w-5 h-5" />
-                        </button>
-                      )}
+                      {/* Hover overlay */}
+                      <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                        <div className="flex gap-6 text-white text-sm font-semibold select-none">
+                          <div className="flex items-center gap-1">
+                            <Heart className="w-5 h-5" color="white" />
+                            <span>{post.likes.length}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <MessageCircle className="w-5 h-5" color="white" />
+                            <span>
+                              {post.comments.reduce(
+                                (sum, comment) => sum + 1 + (comment.replies?.length || 0),
+                                0
+                              )}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Eye className="w-5 h-5" color="white" />
+                            <span>{post.views ?? 0}</span>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   )}
-
                   <div className="p-5 flex flex-col gap-3">
                     <div className="flex items-center justify-between text-sm text-gray-400">
-                      {post.category && (
-                        <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-xs">
-                          {post.category}
-                        </span>
-                      )}
-                      <span>
-                        {new Date(post.createdAt).toLocaleDateString("az-AZ", {
-                          year: "numeric",
-                          month: "short",
-                          day: "numeric",
-                        })}
-                      </span>
+
+                      <p className="text-xs text-gray-400 mt-2">
+                        {timeAgo(post.createdAt)}
+                      </p>
                     </div>
 
                     <h2
@@ -813,245 +842,258 @@ export default function Profile() {
             />
           </div>
         )}
-            {showEditModal && (
-              <div
-                className="fixed inset-0 backdrop-blur-sm bg-opacity-40 flex items-center justify-center z-50"
-                onClick={() => setShowEditModal(false)}
-              >
-                <div
-                  className="bg-white p-6 rounded w-full max-w-md"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <h2 className="text-xl font-bold mb-4">Edit Profile</h2>
-                  <form
-                    onSubmit={async (e) => {
-                      e.preventDefault();
-
-                      let uploadProfileImageFilename = formData.coverImage;
-                      if (file) {
-                        const uploaded = await uploadProfileImage(file);
-                        if (uploaded) {
-                          uploadProfileImageFilename = uploaded;
-                        }
-                      }
-
-                      const res = await fetch(`/api/user/${user.id}`, {
-                        method: "PATCH",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                          username: formData.username,
-                          name: formData.name,
-                          surname: formData.surname,
-                          email: formData.email,
-                          bio: formData.bio,
-                          coverImage: uploadProfileImageFilename, // yeni fayl adı
-                        }),
-                      });
-
-                      const data = await res.json();
-                      if (res.ok) {
-                        localStorage.setItem("user", JSON.stringify(data.user));
-                        setUser(data.user);
-                        notifySuccess("Profil uğurla yeniləndi! ");
-                        setShowEditModal(false);
-                      } else {
-                        notifyError(data.error || "Xəta baş verdi ❌");
-                      }
-                    }}
-                    className="space-y-4"
-                  >
-                    {(["username", "name", "surname", "bio", "email"] as Array<keyof typeof formData>).map((field) => (
-                      <div key={field}>
-                        <label className="block font-medium capitalize">{field}</label>
-                        <input
-                          type="text"
-                          value={formData[field]}
-                          onChange={(e) => setFormData({ ...formData, [field]: e.target.value })}
-                          className="w-full border rounded px-3 py-2"
-                          required={field !== "bio"} // yalnız "bio" üçün required olmasın
-                        />
-                      </div>
-                    ))}
-                    <div className="mb-4">
-                      <label className="block mb-2 font-semibold text-gray-700">Image</label>
-                      <label
-                        htmlFor="file-upload"
-                        className="cursor-pointer inline-block rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 transition"
-                      >
-                        Choose Image
-                      </label>
-                      <input
-                        id="file-upload"
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={(e) => setFile(e.target?.files ? e.target?.files[0] : null)}
-                      />
-                      {file ? (
-                        <p className="mt-2 text-sm text-gray-600">
-                          Selected file: <span className="font-medium">{file.name}</span>
-                        </p>
-                      ) : null}
-                    </div>
-
-
-
-                    <div className="flex justify-end gap-4">
-                      <button
-                        type="button"
-                        onClick={() => setShowEditModal(false)}
-                        className="px-4 py-2 border rounded"
-                      >
-                        İmtina
-                      </button>
-                      <button
-                        type="submit"
-                        className="px-4 py-2 bg-blue-600 text-white rounded"
-                      >
-                        Yadda saxla
-                      </button>
-                    </div>
-                  </form>
-                </div>
-              </div>
-            )}
-
-          </div>
-
-      {/* Modal */}
-        {
-          showCreateModal && (
+        {showEditModal && (
+          <div
+            className="fixed inset-0 backdrop-blur-sm bg-opacity-40 flex items-center justify-center z-50"
+            onClick={() => setShowEditModal(false)}
+          >
             <div
-              className="fixed inset-0 b flex justify-center items-center z-50 backdrop-blur-sm"
-              onClick={() => setShowCreateModal(false)}
+              className="bg-white p-6 rounded w-full max-w-md"
+              onClick={(e) => e.stopPropagation()}
             >
-              <div
-                className="bg-white rounded p-6 max-w-lg w-full"
-                onClick={(e) => e.stopPropagation()}
+              <h2 className="text-xl font-bold mb-4">Edit Profile</h2>
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+
+                  let uploadProfileImageFilename = formData.coverImage;
+                  if (file) {
+                    const uploaded = await uploadProfileImage(file);
+                    if (uploaded) {
+                      uploadProfileImageFilename = uploaded;
+                    }
+                  }
+
+                  const res = await fetch(`/api/user/${user.id}`, {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      username: formData.username,
+                      name: formData.name,
+                      surname: formData.surname,
+                      email: formData.email,
+                      bio: formData.bio,
+                      coverImage: uploadProfileImageFilename, // yeni fayl adı
+                    }),
+                  });
+
+                  const data = await res.json();
+                  if (res.ok) {
+                    localStorage.setItem("user", JSON.stringify(data.user));
+                    setUser(data.user);
+                    notifySuccess("Profil uğurla yeniləndi! ");
+                    setShowEditModal(false);
+                  } else {
+                    notifyError(data.error || "Xəta baş verdi ❌");
+                  }
+                }}
+                className="space-y-4"
               >
-                <h2 className="text-2xl font-bold mb-4">Create New Post</h2>
-                <form onSubmit={handleCreatePost} className="space-y-4">
-                  <div>
-                    <label className="block mb-1 font-semibold">Title</label>
+                {(["username", "name", "surname", "bio", "email"] as Array<keyof typeof formData>).map((field) => (
+                  <div key={field}>
+                    <label className="block font-medium capitalize">{field}</label>
                     <input
                       type="text"
+                      value={formData[field]}
+                      onChange={(e) => setFormData({ ...formData, [field]: e.target.value })}
                       className="w-full border rounded px-3 py-2"
-                      value={newPostTitle}
-                      onChange={(e) => setNewPostTitle(e.target.value)}
-                      required
+                      required={field !== "bio"} // yalnız "bio" üçün required olmasın
                     />
                   </div>
-
-                  <div>
-                    <label className="block mb-1 font-semibold">Content</label>
-                    <textarea
-                      className="w-full border rounded px-3 py-2"
-                      rows={4}
-                      value={newPostContent}
-                      onChange={(e) => setNewPostContent(e.target.value)}
-                      required
-                    ></textarea>
-                  </div>
-
-                  <div className="mb-4">
-                    <label className="block mb-2 font-semibold text-gray-700">Image</label>
-                    <label
-                      htmlFor="file-upload"
-                      className="cursor-pointer inline-block rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 transition"
-                    >
-                      Choose Image
-                    </label>
-                    <input
-                      id="file-upload"
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(e) => setFile(e.target?.files ? e.target?.files[0] : null)}
-                    />
-                    {file ? (
-                      <p className="mt-2 text-sm text-gray-600">
-                        Selected file: <span className="font-medium">{file.name}</span>
-                      </p>
-                    ) : null}
-                  </div>
+                ))}
+                <div className="mb-4">
+                  <label className="block mb-2 font-semibold text-gray-700">Image</label>
+                  <label
+                    htmlFor="file-upload"
+                    className="cursor-pointer inline-block rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 transition"
+                  >
+                    Choose Image
+                  </label>
+                  <input
+                    id="file-upload"
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => setFile(e.target?.files ? e.target?.files[0] : null)}
+                  />
+                  {file ? (
+                    <p className="mt-2 text-sm text-gray-600">
+                      Selected file: <span className="font-medium">{file.name}</span>
+                    </p>
+                  ) : null}
+                </div>
 
 
-                  <div>
-                    <label className="block mb-1 font-semibold">Tags</label>
-                    <div className="flex flex-wrap gap-2">
-                      {allTags?.map((tag) => (
-                        <button
-                          key={tag.id}
-                          type="button"
-                          onClick={() =>
-                            setSelectedTags((prev) =>
-                              prev.includes(tag.id)
-                                ? prev.filter((id) => id !== tag.id)
-                                : [...prev, tag.id]
-                            )
-                          }
-                          className={`px-3 py-1 rounded-full border ${selectedTags.includes(tag.id)
-                            ? "bg-blue-600 text-white"
-                            : "bg-gray-100 text-gray-700"
-                            }`}
-                        >
-                          {tag.label}
-                        </button>
-                      ))}
 
-                    </div>
-                  </div>
-
-                  <div className="flex justify-end space-x-4">
-                    <button
-                      type="button"
-                      className="px-4 py-2 border rounded"
-                      onClick={() => setShowCreateModal(false)}
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      className="px-4 py-2 bg-blue-600 text-white rounded"
-                    >
-                      Create
-                    </button>
-                  </div>
-                </form>
-              </div>
+                <div className="flex justify-end gap-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowEditModal(false)}
+                    className="px-4 py-2 border rounded"
+                  >
+                    İmtina
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-blue-600 text-white rounded"
+                  >
+                    Yadda saxla
+                  </button>
+                </div>
+              </form>
             </div>
-          )
-        }
-        {
-          activeCommentPostId && (
-            <div className="fixed inset-0 z-50 flex justify-center items-center  bg-opacity-50 backdrop-blur-sm">
-              <div className="bg-white w-full max-w-5xl h-[80vh] rounded-2xl flex overflow-hidden relative">
-                <button
-                  onClick={handleModalClose}
-                  className="absolute top-3 right-4 text-xl text-gray-600 hover:text-black"
-                >
-                  ✖
-                </button>
+          </div>
+        )}
 
-                <div className="w-1/2 ">
-                  <img
-                    src={`/blog/${posts.find(p => p.id === activeCommentPostId)?.image}`}
-                    alt="Post"
-                    className="w-full h-full object-cover"
+      </div>
+
+      {/* Modal */}
+      {
+        showCreateModal && (
+          <div
+            className="fixed inset-0 b flex justify-center items-center z-50 backdrop-blur-sm"
+            onClick={() => setShowCreateModal(false)}
+          >
+            <div
+              className="bg-white rounded p-6 max-w-lg w-full"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h2 className="text-2xl font-bold mb-4">Create New Post</h2>
+              <form onSubmit={handleCreatePost} className="space-y-4">
+                <div>
+                  <label className="block mb-1 font-semibold">Title</label>
+                  <input
+                    type="text"
+                    className="w-full border rounded px-3 py-2"
+                    value={newPostTitle}
+                    onChange={(e) => setNewPostTitle(e.target.value)}
+                    required
                   />
                 </div>
 
-                <div className="w-1/2 p-6 overflow-y-auto">
-                  <div className="mb-4 text-lg font-semibold">
-                    👤 {posts?.find(p => p.id === activeCommentPostId)?.author.username}
+                <div>
+                  <label className="block mb-1 font-semibold">Content</label>
+                  <textarea
+                    className="w-full border rounded px-3 py-2"
+                    rows={4}
+                    value={newPostContent}
+                    onChange={(e) => setNewPostContent(e.target.value)}
+                    required
+                  ></textarea>
+                </div>
+
+                <div className="mb-4">
+                  <label className="block mb-2 font-semibold text-gray-700">Image</label>
+                  <label
+                    htmlFor="file-upload"
+                    className="cursor-pointer inline-block rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 transition"
+                  >
+                    Choose Image
+                  </label>
+                  <input
+                    id="file-upload"
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => setFile(e.target?.files ? e.target?.files[0] : null)}
+                  />
+                  {file ? (
+                    <p className="mt-2 text-sm text-gray-600">
+                      Selected file: <span className="font-medium">{file.name}</span>
+                    </p>
+                  ) : null}
+                </div>
+
+
+                <div>
+                  <label className="block mb-1 font-semibold">Tags</label>
+                  <div className="flex flex-wrap gap-2">
+                    {allTags?.map((tag) => (
+                      <button
+                        key={tag.id}
+                        type="button"
+                        onClick={() =>
+                          setSelectedTags((prev) =>
+                            prev.includes(tag.id)
+                              ? prev.filter((id) => id !== tag.id)
+                              : [...prev, tag.id]
+                          )
+                        }
+                        className={`px-3 py-1 rounded-full border ${selectedTags.includes(tag.id)
+                          ? "bg-blue-600 text-white"
+                          : "bg-gray-100 text-gray-700"
+                          }`}
+                      >
+                        {tag.label}
+                      </button>
+                    ))}
+
                   </div>
-                  <CommentSection postId={activeCommentPostId} fetchFollowedPosts={() => Commentchange()} />
+                </div>
+
+                <div className="flex justify-end space-x-4">
+                  <button
+                    type="button"
+                    className="px-4 py-2 border rounded"
+                    onClick={() => setShowCreateModal(false)}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-blue-600 text-white rounded"
+                  >
+                    Create
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )
+      }
+      {
+        activeCommentPostId && (
+          <div className="fixed inset-0 z-50 flex justify-center items-center  bg-opacity-50 backdrop-blur-sm">
+            <div className="bg-white w-full max-w-5xl h-[80vh] rounded-2xl flex overflow-hidden relative">
+              <button
+                onClick={handleModalClose}
+                className="absolute top-3 right-4 text-xl text-gray-600 hover:text-black"
+              >
+                ✖
+              </button>
+
+              <div className="w-1/2 ">
+                <img
+                  src={`/blog/${posts.find(p => p.id === activeCommentPostId)?.image}`}
+                  alt="Post"
+                  className="w-full h-full object-cover"
+                />
+              </div>
+
+              <div className="w-1/2 p-6 overflow-y-auto">
+                <div className=" overflow-hidden">
+                <div className="mb-4 text-lg font-semibold">
+                  {posts.find(p => p.id === activeCommentPostId)?.author.coverImage && (
+                    <img
+                      src={`/uploads/${posts.find(p => p.id === activeCommentPostId)?.author.coverImage}`}
+                      alt={posts.find(p => p.id === activeCommentPostId)?.author.username}
+                      className="inline-block w-10 h-10 rounded-full mr-2 object-cover"
+                    />
+                  )}
+                  {posts.find(p => p.id === activeCommentPostId)?.author.username}
+                </div>
+                <div className="mb-4 text-lg font-semibold">
+                  {posts.find(p => p.id === activeCommentPostId)?.title}
+
                 </div>
               </div>
+                <CommentSection postId={activeCommentPostId} fetchFollowedPosts={() => Commentchange()} />
+              </div>
             </div>
-          )
-        }
-        <Toaster />
-      </div >
-      );
+          </div>
+        )
+      }
+      <Toaster />
+    </div >
+  );
 }

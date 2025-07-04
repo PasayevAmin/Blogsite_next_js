@@ -19,7 +19,7 @@ export async function GET(
       where: { commentId },
       include: {
         author: {
-          select: { id: true, username: true },
+          select: { id: true, username: true, coverImage: true }, // coverImage əlavə edildi
         },
       },
       orderBy: { createdAt: "asc" },

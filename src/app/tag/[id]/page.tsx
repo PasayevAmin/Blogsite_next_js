@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import dynamic from "next/dynamic";
 import SaveButton from "@/app/components/SaveButton";
+import timeAgo from "@/app/components/TimeAgo";
 const CommentSection = dynamic(() => import("@/app/components/Comment"), { ssr: false });
 
 type Post = {
@@ -195,7 +196,7 @@ export default function Details() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {posts===null && (
+          {posts === null && (
             <div className="col-span-full text-center text-gray-500 text-lg">
               Heç bir yazı tapılmadı.
             </div>
@@ -229,13 +230,9 @@ export default function Details() {
                       ))}
                     </div>
                   )}
-                  <span>
-                    {new Date(post.createdAt).toLocaleDateString("az-AZ", {
-                      year: "numeric",
-                      month: "short",
-                      day: "numeric",
-                    })}
-                  </span>
+                  <p className="text-xs text-gray-400 mt-2">
+                    {timeAgo(post.createdAt)}
+                  </p>
                 </div>
 
                 <h2

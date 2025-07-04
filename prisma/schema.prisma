@@ -23,33 +23,34 @@ model User {
   age         Int
   bio         String?     @default("")
   site        String      @default("")
-  posts       Post[]
-  comments    Comment[]
-  replies     Reply[]
-  saved       SavedPost[]
-  likes       Like[]
+  posts       Post[]      @relation("UserPosts")
+  comments    Comment[]   @relation("UserComments")
+  replies     Reply[]     @relation("UserReplies")
+  saved       SavedPost[] @relation("UserSavedPosts")
+  likes       Like[]      @relation("UserLikes")
   role        UserRole    @default(USER)
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
   image       String?     @default("")
-  coverImage  String   @default("")
+  coverImage  String      @default("")
   isVerified  Boolean     @default(false)
   isActive    Boolean     @default(true)
   isBanned    Boolean     @default(false)
   isDeleted   Boolean     @default(false)
-  followers   Follower[]  @relation("FollowRelation_follower")
-  following   Follower[]  @relation("FollowRelation_following")
+  followers   Follower[]  @relation("FollowRelation_following")
+  following   Follower[]  @relation("FollowRelation_follower")
 }
+
 model Post {
   id        Int         @id @default(autoincrement())
   title     String
   path      String?
   image     String?
   content   Json?
-  author    User        @relation(fields: [authorId], references: [id])
+  author    User        @relation("UserPosts", fields: [authorId], references: [id], onDelete: Cascade)
   authorId  Int
   tags      Tag[]       @relation("PostTags")
-  comments  Comment[]
+  comments  Comment[]   @relation("PostComments")
   views     Int         @default(0)
   type      PostType
   createdAt DateTime    @default(now())
@@ -58,33 +59,44 @@ model Post {
   likes     Like[]
 }
 
-model SavedPost {
-  id        Int       @id @default(autoincrement())
-  user      User      @relation(fields: [userId], references: [id])
-  userId    Int
-  post      Post      @relation(fields: [postId], references: [id])
-  postId    Int
-  createdAt DateTime  @default(now())
-}
-
 model Comment {
   id        Int       @id @default(autoincrement())
   content   String
-  author    User      @relation(fields: [authorId], references: [id])
+  author    User      @relation("UserComments", fields: [authorId], references: [id], onDelete: Cascade)
   authorId  Int
-  post      Post      @relation(fields: [postId], references: [id])
+  post      Post      @relation("PostComments", fields: [postId], references: [id], onDelete: Cascade)
   postId    Int
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   replies   Reply[]
 }
 
+model Like {
+  id        Int       @id @default(autoincrement())
+  user      User      @relation("UserLikes", fields: [userId], references: [id], onDelete: Cascade)
+  userId    Int
+  post      Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId    Int
+  createdAt DateTime  @default(now())
+
+  @@unique([userId, postId])
+}
+
+model SavedPost {
+  id        Int       @id @default(autoincrement())
+  user      User      @relation("UserSavedPosts", fields: [userId], references: [id], onDelete: Cascade)
+  userId    Int
+  post      Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId    Int
+  createdAt DateTime  @default(now())
+}
+
 model Reply {
   id        Int       @id @default(autoincrement())
   content   String
-  author    User      @relation(fields: [authorId], references: [id])
+  author    User      @relation("UserReplies", fields: [authorId], references: [id], onDelete: Cascade)
   authorId  Int
-  comment   Comment   @relation(fields: [commentId], references: [id])
+  comment   Comment   @relation(fields: [commentId], references: [id], onDelete: Cascade)
   commentId Int
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -99,22 +111,11 @@ model Tag {
   posts       Post[]   @relation("PostTags")
 }
 
-model Like {
-  id        Int       @id @default(autoincrement())
-  user      User      @relation(fields: [userId], references: [id])
-  userId    Int
-  post      Post      @relation(fields: [postId], references: [id])
-  postId    Int
-  createdAt DateTime  @default(now())
-
-  @@unique([userId, postId])
-}
-
 model Follower {
   id          Int       @id @default(autoincrement())
-  follower    User      @relation("FollowRelation_follower", fields: [followerId], references: [id])
+  follower    User      @relation("FollowRelation_follower", fields: [followerId], references: [id], onDelete: Cascade)
   followerId  Int
-  following   User      @relation("FollowRelation_following", fields: [followingId], references: [id])
+  following   User      @relation("FollowRelation_following", fields: [followingId], references: [id], onDelete: Cascade)
   followingId Int
   createdAt   DateTime  @default(now())
 
@@ -125,6 +126,7 @@ enum PostType {
   DRAFT
   PUBLISHED
 }
+
 enum UserRole {
   USER
   ADMIN

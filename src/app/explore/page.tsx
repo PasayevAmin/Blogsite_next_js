@@ -4,9 +4,12 @@ import { useRouter } from "next/navigation";
 import * as Popover from "@radix-ui/react-popover";
 import { useEffect, useState, useCallback } from "react";
 import { Home, User, Compass, Heart } from "lucide-react";
+import { MessageCircle, Eye } from "lucide-react";
+
 import CommentSection from "../components/Comment";
 import PostSearch from "@/app/components/PostSearch";
 import SaveButton from "../components/SaveButton";
+import timeAgo from "../components/TimeAgo";
 
 type Post = {
   id: number;
@@ -15,6 +18,7 @@ type Post = {
   author: {
     id: number;
     username: string;
+    coverImage?: string;
   };
   createdAt: string;
   likes: { id: number; userId: number; postId: number; createdAt: string }[];
@@ -28,6 +32,7 @@ type Post = {
   content: string;
   image?: string;
   saved: { userId: number }[];
+  views?: number;
 };
 function LikeButton({
   postId,
@@ -330,25 +335,46 @@ export default function BlogPage() {
               className="bg-white shadow-lg rounded-2xl overflow-hidden transition-transform transform hover:scale-[1.02] hover:shadow-2xl cursor-pointer"
             >
               {post.image && (
-                <img
-                  src={`/blog/${post.image}`}
-                  alt={post.title}
-                  className="w-full h-60 object-cover"
-                  onClick={() => router.push(`/post/${post.id}`)}
-                />
+                <div onClick={() => router.push(`/post/${post.id}`)} className="relative group cursor-pointer">
+                  <img
+                    src={`/blog/${post.image}`}
+                    alt={post.title}
+                    className="w-full h-60 object-cover"
+                    onClick={() => router.push(`/post/${post.id}`)}
+                  />
+                  {/* Hover overlay */}
+                  <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                    <div className="flex gap-6 text-white text-sm font-semibold select-none">
+                      <div className="flex items-center gap-1">
+                        <Heart className="w-5 h-5" color="white" />
+                        <span>{post.likes.length}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <MessageCircle className="w-5 h-5" color="white" />
+                        <span>
+                          {post.comments.reduce(
+                            (sum, comment) => sum + 1 + (comment.replies?.length || 0),
+                            0
+                          )}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Eye className="w-5 h-5" color="white" />
+                        <span>{post.views ?? 0}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               )}
+
 
               <div className="p-5 flex flex-col gap-3">
                 {/* Top Bar */}
                 <div className="flex items-center justify-between text-sm text-gray-400">
 
-                  <span>
-                    {new Date(post.createdAt).toLocaleDateString("az-AZ", {
-                      year: "numeric",
-                      month: "short",
-                      day: "numeric",
-                    })}
-                  </span>
+                  <p className="text-xs text-gray-400 mt-2">
+                    {timeAgo(post.createdAt)}
+                  </p>
                 </div>
 
                 {/* Title */}
@@ -473,8 +499,21 @@ export default function BlogPage() {
             </div>
 
             <div className="w-1/2 p-6 overflow-y-auto">
-              <div className="mb-4 text-lg font-semibold">
-                👤 {posts.find(p => p.id === activeCommentPostId)?.author.username}
+              <div className=" overflow-hidden">
+                <div className="mb-4 text-lg font-semibold">
+                  {posts.find(p => p.id === activeCommentPostId)?.author.coverImage && (
+                    <img
+                      src={`/uploads/${posts.find(p => p.id === activeCommentPostId)?.author.coverImage}`}
+                      alt={posts.find(p => p.id === activeCommentPostId)?.author.username}
+                      className="inline-block w-10 h-10 rounded-full mr-2 object-cover"
+                    />
+                  )}
+                  {posts.find(p => p.id === activeCommentPostId)?.author.username}
+                </div>
+                <div className="mb-4 text-lg font-semibold">
+                  {posts.find(p => p.id === activeCommentPostId)?.title}
+
+                </div>
               </div>
               <CommentSection postId={activeCommentPostId} fetchFollowedPosts={() => Commentchange()} />
             </div>

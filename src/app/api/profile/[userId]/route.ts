@@ -36,7 +36,7 @@ export async function GET(
         likes: true,
         saved: true,
         author: {
-          select: { id: true, username: true, image: true },
+          select: { id: true, username: true, coverImage: true },
         },
       },
       orderBy: { createdAt: "desc" },

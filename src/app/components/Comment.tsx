@@ -1,18 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import timeAgo from "./TimeAgo";
 
 interface Reply {
   id: number;
   content: string;
-  author: { id: number; username: string };
+  author: { id: number; username: string, coverImage?: string };
   createdAt: string;
 }
 
 type Comment = {
   id: number;
   content: string;
-  author: { id: number; username: string };
+  author: { id: number; username: string, coverImage?: string };
   createdAt: string;
   replies?: Reply[];
 };
@@ -115,28 +116,35 @@ export default function CommentSection({
             const replyCount = comment.replies?.length || 0;
             const isRepliesShown = showReplies[comment.id] || false;
             const isReplyInputShown = showReplyInput[comment.id] || false;
-
             return (
               <li key={comment.id} className="bg-gray-100 p-3 rounded">
-                <div className="text-sm text-gray-700 mb-1">{comment.content}</div>
 
-                <div className="text-xs text-gray-500 flex justify-between items-center">
-                  <span>
-                    👤 {comment.author.username} |{" "}
-                    {new Date(comment.createdAt).toLocaleDateString("az-AZ")}
-                  </span>
+                <div className="flex items-start gap-3">
+                  <img
+                    src={`/uploads/${comment.author.coverImage || "default-avatar.png"}`}
+                    alt={comment.author.username}
+                    className="w-10 h-10 rounded-full object-cover"
+                  />
 
-                  <button
-                    onClick={() =>
-                      setShowReplyInput((prev) => ({
-                        ...prev,
-                        [comment.id]: !prev[comment.id],
-                      }))
-                    }
-                    className="text-blue-600 text-xs hover:underline"
-                  >
-                    📝 Cavab yaz
-                  </button>
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold text-gray-800">{comment.author.username}</p>
+                    <p className="text-sm text-gray-800">{comment.content}</p>
+
+                    <div className="flex items-center gap-4 text-xs text-gray-500 mt-1">
+                      <span>{timeAgo(comment.createdAt)}</span>
+                      <button
+                        onClick={() =>
+                          setShowReplyInput((prev) => ({
+                            ...prev,
+                            [comment.id]: !prev[comment.id],
+                          }))
+                        }
+                        className="hover:underline"
+                      >
+                        Cavab yaz
+                      </button>
+                    </div>
+                  </div>
                 </div>
 
                 {replyCount > 0 && (
@@ -156,8 +164,8 @@ export default function CommentSection({
                 {isRepliesShown && comment.replies && (
                   <div className="ml-4 mt-2 space-y-1">
                     {comment.replies.map((reply) => (
-                      <div key={reply.id} className="text-sm text-gray-600">
-                        ↳ <strong>{reply.author.username}</strong>: {reply.content}
+                      <div key={reply.id} className="text-sm text-gray-800">
+                        ↳ <strong>{reply.author.coverImage && <img src={`/uploads/${reply.author.coverImage}`} alt={reply.author.username} className="inline-block w-10 h-10 rounded-full mr-1 object-cover" />}{reply.author.username}</strong>: {reply.content}
                       </div>
                     ))}
                   </div>

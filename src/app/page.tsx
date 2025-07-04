@@ -10,6 +10,7 @@ import { notifySuccess } from "@/app/lib/toast/toasthelper";
 import PostSearch from "./components/PostSearch";
 import SaveButton from "./components/SaveButton";
 import { userAgent } from "next/server";
+import axios from "axios";
 const CommentSection = dynamic(() => import("@/app/components/Comment"), { ssr: false });
 type Tag = {
   id: number;
@@ -24,6 +25,7 @@ type Post = {
   author: {
     id: number;
     username: string;
+    coverImage?: string;
   };
   createdAt: string;
   likes: { userId: number }[];
@@ -37,6 +39,7 @@ type Post = {
   content: string;
   image?: string;
   saved: { userId: number }[];
+  views:  number  // Added views property
 };
 
 
@@ -179,9 +182,11 @@ export default function BlogPage() {
     }
   };
 
-  const fetchCommentsf = () => {
+  const fetchCommentsf = async () => {
     if (typeof window !== "undefined") {
       const storedUserJson = localStorage.getItem("user");
+      const res = await axios.get("/api/auth/me", { withCredentials: true });
+      console.log("res:", res.data);
       if (!storedUserJson) {
         router.push("/login");
         return;
@@ -267,7 +272,12 @@ export default function BlogPage() {
     });
     return Array.from(tagMap.values());
   }, [posts]);
+useEffect(() => {
+  console.log("Posts:", posts.map(post => post.author.coverImage));
 
+
+  
+}, [])
 
   return (
     <div className="bg-gray-100 min-h-screen py-10">
@@ -305,7 +315,7 @@ export default function BlogPage() {
 
           <div className="hidden sm:flex justify-end items-center space-x-4 mb-8 p-4">
             <span className="text-gray-700 font-semibold">
-              Welcome, <strong>{user?.username}</strong>
+              <strong>{user?.username}</strong>
             </span>
 
             <Popover.Root>
@@ -348,63 +358,59 @@ export default function BlogPage() {
 
         {/* Main Content */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Feed */}
           <div className="lg:col-span-2 space-y-10">
-            {posts?.map((post) => (
-              <div
-                key={post.id}
-                className="p-[2px] bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 rounded-lg cursor-pointer hover:shadow-xl transition-shadow duration-300"
-              >
-                <div className="bg-white rounded-lg overflow-hidden">
+            <div className="space-y-8">
+              {posts?.map((post) => (
+                console.log("author image:", post.author.coverImage?.length),
+                <div
+                  key={post.id}
+                  className="max-w-xl mx-auto border border-gray-200 rounded-xl bg-white shadow-md"
+                >
+                  {/* Author info */}
+                  <div className="flex items-center px-4 py-3">
+                    <img
+                      src={`/uploads/${post.author.coverImage || "default-avatar.png"}`}
+                      alt={post.author.username}
+                      className="w-9 h-9 rounded-full object-cover mr-3"
+                    />
+                    <span
+                      onClick={() =>
+                        router.push(
+                          user?.id === post.author.id
+                            ? "/profile"
+                            : `/profile/${post.author.id}`
+                        )
+                      }
+                      className="font-medium text-sm text-gray-800 cursor-pointer hover:text-blue-500 transition"
+                    >
+                      {post.author.username}
+                    </span>
+                  </div>
+
+                  {/* Image */}
                   {post.image && (
                     <img
                       src={`/blog/${post.image}`}
                       alt={post.title}
-                      className="w-full h-68 object-cover rounded-t-lg"
+                      className="w-full max-h-[500px] object-cover cursor-pointer"
                       onClick={() => router.push(`/post/${post.id}`)}
                     />
                   )}
-                  <div className="p-6">
-                    <h2
-                      className="text-xl font-bold mb-2 text-center"
-                      onClick={() => router.push(`/post/${post.id}`)}
-                    >
-                      {post.title}
-                    </h2>
-                    <div className="flex justify-center items-center text-gray-500 text-sm gap-4 mb-6">
-                      <span
-                        onClick={() =>
-                          router.push(
-                            user?.id === post.author.id
-                              ? "/profile"
-                              : `/profile/${post.author.id}`
-                          )
-                        }
-                        className="cursor-pointer hover:text-blue-600"
-                      >
-                        👤 <strong>{post.author.username}</strong>
-                      </span>
 
-                      <span>
-                        📅{" "} { }
-                        {new Date(post.createdAt).toLocaleDateString("az-AZ", {
-                          day: "2-digit",
-                          month: "long",
-                          year: "numeric",
-                        })}
-                      </span>
+                  {/* Footer (like/comment/save) */}
+                  <div className="px-4 py-3">
+                    <div className="flex items-center gap-2 sm:gap-3 text-base sm:text-sm mb-2">
                       <LikeButton
                         postId={post.id}
                         likes={post.likes}
                         currentUserId={user?.id}
                       />
-                      <span className="text-black" onClick={() => setActiveCommentPostId(post.id)}>💬
-                        {
-                          post.comments.reduce(
-                            (sum, comment) => sum + 1 + (comment.replies?.length || 0),
-                            0
-                          )
-                        }
-
+                      <span
+                        className="cursor-pointer"
+                        onClick={() => setActiveCommentPostId(post.id)}
+                      >
+                        💬{post.comments.length}
                       </span>
                       <SaveButton
                         currentUserId={user.id ?? 0}
@@ -412,42 +418,40 @@ export default function BlogPage() {
                         saved={post.saved}
                       />
                     </div>
-                    <p className="text-gray-700 mb-4">
+
+                    {/* Like count */}
+                    <p className="text-sm text-gray-800 font-medium mb-1">
+                      {post.views} Views
+                    </p>
+
+                    {/* Caption */}
+                    <p className="text-sm text-gray-700">
+                      <span className="font-semibold mr-1 text-gray-800">
+                        {post.author.username}
+                      </span>
                       {post.content.length > 100
                         ? post.content.substring(0, 100) + "..."
                         : post.content}
                     </p>
-                    <div className="text-center">
-                      <button
-                        onClick={() => router.push(`/post/${post.id}`)}
-                        className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-                      >
-                        Read More
-                      </button>
 
-                      {post.tags && post.tags.length > 0 && (
-                        <div className="flex flex-wrap gap-2 mt-4">
-                          {post.tags.map((tag) => (
-                            <span
-                              key={tag.id}
-                              onClick={() => router.push(`/tag/${tag.id}`)}
-                              className="text-white text-xs font-medium px-2 py-1 rounded bg-blue-500 cursor-pointer hover:opacity-80 transition"
-                            >
-                              {tag.label}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                    </div>
+                    {/* Date */}
+                    <p className="text-xs text-gray-400 mt-2">
+                      {new Date(post.createdAt).toLocaleDateString("az-AZ", {
+                        day: "2-digit",
+                        month: "long",
+                        year: "numeric",
+                      })}
+                    </p>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
 
+            {/* Loading */}
             {loading && (
               <div className="flex justify-center py-6">
                 <svg
-                  className="animate-spin h-8 w-8 text-gray-600"
+                  className="animate-spin h-6 w-6 text-gray-500"
                   xmlns="http://www.w3.org/2000/svg"
                   fill="none"
                   viewBox="0 0 24 24"
@@ -468,8 +472,12 @@ export default function BlogPage() {
                 </svg>
               </div>
             )}
+
+            {/* No more posts */}
             {!hasMore && (
-              <div className="text-center text-gray-400 font-medium mt-6">Daha çox post yoxdur.</div>
+              <div className="text-center text-gray-400 font-medium mt-6">
+                Daha çox post yoxdur.
+              </div>
             )}
           </div>
 
@@ -496,6 +504,8 @@ export default function BlogPage() {
             </div>
           </div>
         </div>
+
+
       </div>
       {activeCommentPostId && (
         <div className="fixed inset-0 z-50 flex justify-center items-center  bg-opacity-50 backdrop-blur-sm">
@@ -520,18 +530,28 @@ export default function BlogPage() {
 
               <div className=" overflow-hidden">
                 <div className="mb-4 text-lg font-semibold">
-                  👤 {posts.find(p => p.id === activeCommentPostId)?.author.username}
+                  {posts.find(p => p.id === activeCommentPostId)?.author.coverImage && (
+                    <img
+                      src={`/uploads/${posts.find(p => p.id === activeCommentPostId)?.author.coverImage}`}
+                      alt={posts.find(p => p.id === activeCommentPostId)?.author.username}
+                      className="inline-block w-10 h-10 rounded-full mr-2 object-cover"
+                    />
+                  )}
+                  {posts.find(p => p.id === activeCommentPostId)?.author.username}
+                </div>
+                <div className="mb-4 text-lg font-semibold">
+                  {posts.find(p => p.id === activeCommentPostId)?.title}
+
                 </div>
               </div>
 
 
 
-              <div className=" overflow-hidden">
+             
 
 
 
                 <CommentSection postId={activeCommentPostId} fetchFollowedPosts={() => fetchCommentsf()} />
-              </div>
             </div>
 
           </div>

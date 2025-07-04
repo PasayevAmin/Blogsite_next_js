@@ -2,9 +2,10 @@
 
 import CommentSection from "@/app/components/Comment";
 import SaveButton from "@/app/components/SaveButton";
+import timeAgo from "@/app/components/TimeAgo";
 import { useParams } from "next/navigation";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 
 type Post = {
   id: number;
@@ -31,6 +32,7 @@ type Post = {
   content: string;
   image?: string;
   saved: { userId: number }[];
+  views: number;
 };
 
 function LikeButton({
@@ -109,85 +111,104 @@ function LikeButton({
 }
 
 export default function Details() {
-  const router = useRouter()
+   const router = useRouter();
   const params = useParams();
   const postId = params?.id;
+
   const [post, setPost] = useState<Post | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [activeCommentPostId, setActiveCommentPostId] = useState<number | null>(null);
   const [reloadCommentCount, setReloadCommentCount] = useState(0);
-  // Get current user from localStorage
-  const [loading, setLoading] = useTransition()
-
+  const [isViewed, setIsViewed] = useState(false);
   const [user, setUser] = useState<{ id: string } | null>(null);
+  const [loading, setLoading] = useTransition();
 
+  // ✅ Istifadəçi və Post View logic
   useEffect(() => {
-    const storedUser = JSON.parse(localStorage.getItem("user") || "null");
-    if (storedUser && storedUser.id) {
-      setUser(storedUser);
-    }
-  }, []);
+    const storedUser = localStorage.getItem("user");
 
+    if (!storedUser) {
+      router.push("/login");
+      return;
+    }
+
+    const parsedUser = JSON.parse(storedUser);
+    if (!parsedUser?.id) {
+      router.push("/login");
+      return;
+    }
+
+    setUser(parsedUser);
+
+    // ✅ Post view artırma
+    if (postId) {
+      const sessionKey = `viewed_post_${postId}`;
+      const alreadyViewed = sessionStorage.getItem(sessionKey);
+
+      if (!alreadyViewed) {
+        fetch(`/api/post/views/${postId}`, { method: "POST" })
+          .then((res) => {
+            if (res.ok) {
+              sessionStorage.setItem(sessionKey, "true");
+              setIsViewed(true);
+            }
+          })
+          .catch((err) => console.error("Baxış artırıla bilmədi:", err));
+      } else {
+        setIsViewed(true);
+      }
+    }
+  }, [postId]);
+
+  // ✅ Postu backend-dən fetch et
   async function fetchUserPost(id: number) {
     setLoading(async () => {
       try {
         const res = await fetch(`/api/post/${id}`);
-        if (!res.ok) throw new Error("Xəta baş verdi");
-
+        if (!res.ok) throw new Error("Post alınarkən xəta baş verdi.");
         const data = await res.json();
         setPost(data.posts);
-
       } catch (error) {
         console.error(error);
       }
-    })
+    });
   }
 
+  // ✅ Post yükləmə
   useEffect(() => {
     if (!postId) return;
-
     const id = Number(postId);
     if (!isNaN(id)) {
       fetchUserPost(id);
     }
   }, [postId]);
-  const Commnetchange = () => {
-    if (!postId) return;
 
-    const id = Number(postId);
-    if (!isNaN(id)) {
-      fetchUserPost(id);
-    }
-  }
-
-  if (!post) {
-    return loading ? (
-      <div className="flex justify-center py-6">
-        <svg
-          className="animate-spin h-8 w-8 text-gray-600"
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-        >
-          <circle
-            className="opacity-25"
-            cx="12" cy="12" r="10"
-            stroke="currentColor"
-            strokeWidth="4"
-          ></circle>
-          <path
-            className="opacity-75"
-            fill="currentColor"
-            d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
-          ></path>
-        </svg>
-      </div>
-    ) : null;
-  }
+  // ✅ Comment modal bağlananda postu yenilə
   const handleModalClose = () => {
     setActiveCommentPostId(null);
     setReloadCommentCount((prev) => prev + 1);
   };
+
+  // ✅ Manual comment dəyişməsi (tək-tük istifadə)
+  const CommentChange = () => {
+    if (!postId) return;
+    const id = Number(postId);
+    if (!isNaN(id)) {
+      fetchUserPost(id);
+    }
+  };
+
+  // ✅ Yüklənmə zamanı skeleton göstərin
+  if (!post) {
+    return loading ? (
+      <div className="flex justify-center py-6">
+        <svg className="animate-spin h-8 w-8 text-gray-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+        </svg>
+      </div>
+    ) : null;
+  }
 
   return (
     <div className="max-w-4xl mx-auto py-10 px-4">
@@ -235,6 +256,7 @@ export default function Details() {
                   : `/profile/${post.author.id}`
               )
             }>👤 <strong>{post.author.username}</strong></span>
+
             <span>📅 {new Date(post.createdAt).toLocaleDateString("az-AZ", { day: "2-digit", month: "long", year: "numeric" })}</span>
             <LikeButton
               postId={post.id}
@@ -252,6 +274,12 @@ export default function Details() {
               saved={post.saved}
             />
           </div>
+          <p>
+            {post.views} baxış
+          </p>
+          <p className="text-xs text-gray-400 mt-2">
+            {timeAgo(post.createdAt)}
+          </p>
           <p className="text-gray-700 leading-relaxed text-lg mb-6">
             {post.content}
           </p>
@@ -296,7 +324,7 @@ export default function Details() {
               <div className="mb-4 text-lg font-semibold">
                 👤 {post?.author.username}
               </div>
-              <CommentSection postId={activeCommentPostId} fetchFollowedPosts={() => Commnetchange()} />
+              <CommentSection postId={activeCommentPostId} fetchFollowedPosts={() => CommentChange()} />
             </div>
           </div>
         </div>

@@ -38,6 +38,7 @@ export async function POST(req: NextRequest) {
           select: {
             id: true,
             username: true,
+            coverImage: true, // 💡 coverImage-i daxil et
           },
         },
         saved: true, // 💡 saved-i daxil et
