@@ -146,8 +146,8 @@ export default function BlogPage() {
       setLoading(true);
       try {
         const res = await fetch(`/api/post?limit=${limit}&offset=${currentOffset}`);
-        if (!res.ok) throw new Error("Xəta baş verdi");
 
+        if (!res.ok) throw new Error("Xəta baş verdi");
         const data = await res.json();
 
         if (data.posts?.length < limit) {

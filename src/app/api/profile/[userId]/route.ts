@@ -1,6 +1,7 @@
 // src/app/api/post/[userId]/route.ts
 
 import { PrismaClient } from "@/generated/prisma";
+import { console } from "node:inspector/promises";
 
 const prisma = new PrismaClient();
 
@@ -41,7 +42,6 @@ export async function GET(
       },
       orderBy: { createdAt: "desc" },
     });
-
     return new Response(
       JSON.stringify({ posts: userPosts, user: user }),
       { status: 200, headers: { "Content-Type": "application/json" } }
